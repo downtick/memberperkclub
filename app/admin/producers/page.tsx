@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminProducersPage() {
@@ -24,7 +25,10 @@ export default async function AdminProducersPage() {
 
   return (
     <div>
-      <h1 className="display" style={{ fontSize: 28, marginBottom: 20 }}>Producers</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        <h1 className="display" style={{ fontSize: 28, margin: 0 }}>Producers</h1>
+        <Link href="/admin/producers/new" className="btn-primary">Add a producer</Link>
+      </div>
 
       <div className="card scroller" style={{ padding: 16 }}>
         <table className="table">

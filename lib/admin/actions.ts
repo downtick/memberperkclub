@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWelcomeEmail } from "@/lib/emails";
+import { sendWelcomeEmail, sendProducerWelcomeEmail } from "@/lib/emails";
 
 // ============================================================================
 // Admin server actions. Every one starts with requireAdmin() (reads the
@@ -185,4 +185,116 @@ export async function createMemberByAdmin(input: CreateMemberInput) {
 
   revalidatePath("/admin/members");
   return { id: created.user.id, memberNumber: member?.member_number };
+}
+
+export interface CreateProducerInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+  businessName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  sendWelcome: boolean;
+  passwordMode: "temp" | "link";
+}
+
+/**
+ * Hand-create a producer account (the admin-side equivalent of
+ * /producer-signup) for an agent who signs up by phone or in person.
+ *
+ * Deliberately does NOT capture a payment method: we never take an agent's
+ * card on their behalf. The account is created with no payment method on
+ * file, so the enroll endpoint keeps refusing until the producer adds one
+ * themselves — which is exactly what the welcome email links to.
+ */
+export async function createProducerByAdmin(input: CreateProducerInput) {
+  const admin = await requireAdmin();
+  const db = createAdminClient();
+
+  const { data: existing } = await db
+    .from("profiles")
+    .select("id")
+    .eq("email", input.email)
+    .maybeSingle();
+  if (existing) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  const tempPassword = input.passwordMode === "temp" ? randomTempPassword() : undefined;
+
+  const { data: created, error } = await db.auth.admin.createUser({
+    email: input.email,
+    password: tempPassword,
+    email_confirm: true,
+  });
+  if (error || !created.user) {
+    throw new Error(error?.message || "Failed to create auth user.");
+  }
+
+  const userId = created.user.id;
+
+  // handle_new_auth_user() already inserted a bare profiles row.
+  await db
+    .from("profiles")
+    .update({
+      role: "producer",
+      first_name: input.firstName,
+      last_name: input.lastName,
+      phone: input.phone,
+      state: input.state,
+    })
+    .eq("id", userId);
+
+  const { error: producerError } = await db.from("producers").insert({
+    id: userId,
+    business_name: input.businessName,
+    address_line1: input.addressLine1,
+    address_line2: input.addressLine2 || null,
+    city: input.city,
+    state: input.state,
+    postal_code: input.postalCode,
+    billing_mode: "per_client",
+  });
+  if (producerError) {
+    throw new Error(producerError.message || "Failed to create the producer record.");
+  }
+
+  await db.from("member_events").insert({
+    member_id: userId,
+    actor_id: admin.id,
+    event: "member_created_by_admin",
+    detail: { role: "producer", businessName: input.businessName, passwordMode: input.passwordMode },
+  });
+
+  let setPasswordLink: string | undefined;
+  if (input.passwordMode === "link") {
+    const { data: linkData } = await db.auth.admin.generateLink({
+      type: "magiclink",
+      email: input.email,
+    });
+    setPasswordLink = linkData?.properties?.action_link;
+  }
+
+  if (input.sendWelcome) {
+    await sendProducerWelcomeEmail({
+      to: input.email,
+      firstName: input.firstName,
+      businessName: input.businessName,
+      tempPassword,
+      setPasswordLink,
+    }).catch((err) => console.error("Producer welcome email error:", err));
+
+    await db.from("member_events").insert({
+      member_id: userId,
+      actor_id: admin.id,
+      event: "welcome_email_sent",
+    });
+  }
+
+  revalidatePath("/admin/producers");
+  return { id: userId, businessName: input.businessName };
 }

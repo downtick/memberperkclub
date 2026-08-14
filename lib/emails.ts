@@ -150,3 +150,59 @@ export async function sendContactNotice(opts: {
 
   return sendEmail({ to: adminNotifyAddress(), subject: `Contact form: ${firstName} ${lastName}`, html, text, replyTo: email });
 }
+
+// ── 4. Producer welcome (admin-created account) ───────────────────────────
+// Sent when an admin hand-creates a producer account. The single call to
+// action is adding a payment method: a producer cannot enroll anyone until
+// one is on file, so that page — not the dashboard — is where they land.
+export async function sendProducerWelcomeEmail(opts: {
+  to: string;
+  firstName: string;
+  businessName: string;
+  tempPassword?: string;
+  setPasswordLink?: string;
+}) {
+  const { to, firstName, businessName, tempPassword, setPasswordLink } = opts;
+
+  const credentialsHtml = tempPassword
+    ? `<p>Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.</p>
+       <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Log in to your producer account &rarr;</a></p>`
+    : `<p>Click below to set your password and activate your producer account:</p>
+       <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
+       <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`;
+
+  const html = wrap(
+    "Your producer account is ready",
+    `<p>Hi ${firstName || "there"},</p>
+     <p>We've set up a producer account for <strong>${businessName}</strong> on MemberPerkClub. It's free, there's no contract, and there's no monthly fee.</p>
+     ${credentialsHtml}
+     <h3 style="color:${INK};font-size:16px;margin-top:24px">How it works</h3>
+     <ul style="padding-left:20px;color:#4C405F">
+       <li>You buy memberships at the wholesale rate of <strong>$12</strong>.</li>
+       <li>You are the retail seller &mdash; you decide what your client pays, up to the $149 public price.</li>
+       <li>You keep the difference. There is no commission to wait for, because the margin is already yours.</li>
+       <li>Each enrollment is a one-time charge. Nothing auto-renews.</li>
+     </ul>
+     <h3 style="color:${INK};font-size:16px;margin-top:24px">One step before you can enroll anyone</h3>
+     <p>Add a payment method. We store it with our payment processor &mdash; we never see the number &mdash; and you're only charged the $12 when you choose to enroll a client.</p>
+     <p><a href="${SITE_URL}/producer/payment-method" style="color:${VIOLET};font-weight:700">Add your payment method &rarr;</a></p>
+     <p>Once that's saved you can enroll your first client the same day. Your agency name appears in every client's dashboard all year.</p>
+     <p>Questions? Just reply to this email.</p>`
+  );
+
+  const text = `Your MemberPerkClub producer account is ready
+
+We've set up a producer account for ${businessName}.
+${tempPassword ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.` : `Set your password: ${setPasswordLink}`}
+
+How it works:
+- You buy memberships at the $12 wholesale rate.
+- You set your own retail price, up to the $149 public price.
+- You keep the difference. No commissions — the margin is yours.
+- One-time charge per membership. Nothing auto-renews.
+
+Before you can enroll anyone, add a payment method:
+${SITE_URL}/producer/payment-method`;
+
+  return sendEmail({ to, subject: "Your MemberPerkClub producer account is ready", html, text });
+}
