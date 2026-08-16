@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { memberNumberDigits } from "@/lib/membership";
+import { requireAdmin } from "@/lib/access";
 
 export default async function AdminDashboard() {
+  await requireAdmin();
   const supabase = await createClient();
 
   const [{ count: active }, { count: lapsed }, { count: producerEnrolled }, { count: producers }] = await Promise.all([

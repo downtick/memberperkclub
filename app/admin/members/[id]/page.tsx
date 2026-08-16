@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AdminMemberActions from "@/components/admin/AdminMemberActions";
 import { memberNumberLabel } from "@/lib/membership";
 import type { Profile, MemberEvent } from "@/lib/types";
+import { requireAdmin } from "@/lib/access";
 
 const EVENT_LABELS: Record<string, string> = {
   joined: "Joined",
@@ -23,6 +24,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export default async function AdminMemberDetail({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const supabase = await createClient();
 

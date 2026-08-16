@@ -5,7 +5,18 @@ import type { MemberAccess, Profile } from "./types";
 // Reads the signed-in user's profile (server-side, session-based). Returns
 // null if not signed in. This is the single place every gate should read
 // from — never trust client-provided role/status.
+/**
+ * True once the Supabase environment variables are present. The public
+ * marketing pages render the Header, which asks for the current profile, so
+ * without this check an unconfigured deploy 500s on every page instead of
+ * simply showing a logged-out site.
+ */
+export function isAuthConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 export async function getCurrentProfile(): Promise<Profile | null> {
+  if (!isAuthConfigured()) return null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,6 +28,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 }
 
 export async function getCurrentAccess(): Promise<MemberAccess | null> {
+  if (!isAuthConfigured()) return null;
   const supabase = await createClient();
   const {
     data: { user },

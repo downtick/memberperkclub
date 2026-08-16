@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { memberNumberDigits } from "@/lib/membership";
+import { requireAdmin } from "@/lib/access";
 
 export default async function AdminMembersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  await requireAdmin();
   const { q = "", status = "" } = await searchParams;
   const supabase = await createClient();
 

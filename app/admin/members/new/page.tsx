@@ -1,7 +1,9 @@
 import NewMemberForm from "@/components/admin/NewMemberForm";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/access";
 
 export default async function NewMemberPage() {
+  await requireAdmin();
   const supabase = await createClient();
   const { data: producers } = await supabase
     .from("producers")

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteArticle } from "@/lib/admin/resourceActions";
 import DeleteButton from "@/components/admin/DeleteButton";
+import { requireAdmin } from "@/lib/access";
 
 export default async function AdminArticlesPage() {
+  await requireAdmin();
   const supabase = await createClient();
   const { data: articles } = await supabase.from("articles").select("*").order("category").order("title");
 

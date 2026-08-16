@@ -2,8 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { deleteResource } from "@/lib/admin/resourceActions";
 import DeleteButton from "@/components/admin/DeleteButton";
+import { requireAdmin } from "@/lib/access";
 
 export default async function AdminResourcesPage() {
+  await requireAdmin();
   const supabase = await createClient();
   const { data: resources } = await supabase.from("resources").select("*").order("category").order("sort");
 
