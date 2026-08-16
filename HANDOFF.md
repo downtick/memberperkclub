@@ -162,18 +162,60 @@ contains **zero emoji** — verified by a codepoint sweep. Printable checklists 
   behind `SMTP2GO_API_KEY`/`EMAIL_FROM`, logs a warning and no-ops if unset rather than throwing).
 - **`npm run build` passes** with no errors (TypeScript clean; see Deferred below re: ESLint).
 
-## What's pending / deferred
+## Punchlist (in priority order)
 
-- **Real keys**: Stripe (secret/publishable/webhook secret/price id), Supabase (URL/anon/service
-  role — then run `supabase/schema.sql` then `supabase/seed.sql`), SMTP2GO (API key + verified
-  sending domain). Nothing here calls a live API without them; routes fail gracefully or 501.
-- **First admin**: after the first real signup, run the commented `update profiles set role =
-  'admin' where email = '...'` at the bottom of `schema.sql`.
-- **Turnstile**: the contact form has honeypot + IP rate-limiting but Turnstile itself isn't
-  wired in yet (spec calls for it) — add the widget + server-side verify call when a site key
-  exists.
-- **DNS/Vercel deploy**: not deployed. No `git init`/push was done, per instructions — this is
-  local scaffolding only.
+**1. Connect Supabase — TOP PRIORITY, blocks everything behind the login.**
+Create the project, run `supabase/schema.sql` then `supabase/seed.sql`, and set
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+in Vercel. Until then the public marketing pages render fine (verified) but nobody can
+sign up, log in, or reach the dashboard, producer portal, or admin panel.
+Then promote yourself: run the commented `update profiles set role = 'admin' where
+email = '...'` at the bottom of `schema.sql` after your first signup.
+
+**2. Sendy — producer/agent marketing list.** A second, separate Sendy list and sending
+identity for marketing *to* producers and agents (people who would resell the service),
+kept apart from the member list below. Send it from a bulk subdomain so campaign
+complaints can't damage transactional deliverability. Not yet created.
+
+**3. Affiliate links crediting the wrong property.** Five seeded perk URLs still carry
+ServiceLocatorPro's partner slug (CallRail, SimpleTexting, QuickBooks, Freshsales, High
+Level Science). No branding leaks, but commissions may credit the wrong site. Pull
+MemberPerkClub-specific links from each merchant dashboard before launch.
+
+**4. Counsel review** of `/terms`, `/privacy`, `/disclaimer` — especially the
+governing-law/venue placeholder in Terms §10, the two-membership-path clauses, and
+`NEXT_PUBLIC_SITE_LEGAL_ENTITY` (must name the entity that actually exists).
+
+**5. Remaining Stripe keys** (secret/publishable/webhook secret/price id). The webhook
+secret can only be created after the first deploy, since Stripe needs the endpoint URL
+to exist. Checkout returns a clean "not configured yet" message until `STRIPE_PRICE_ANNUAL`
+is real.
+
+**6. Dedicated producer signup page + first-sale kit** — split-screen signup with the
+margin calculator alongside the form, and a flyer / sample email copy / "what should I
+charge?" guide so a new producer can sell the day after signing up.
+
+**7. Six of eleven articles are still stubs.**
+
+**Dropped by decision:** Turnstile. The contact form keeps its honeypot and IP
+rate-limiting; no CAPTCHA will be added.
+
+## Email &amp; Sendy
+
+- **Single mailbox**: `club@memberperkclub.com` handles everything. Point `EMAIL_FROM`,
+  `ADMIN_NOTIFY_EMAIL`, `NEXT_PUBLIC_SUPPORT_EMAIL`, and `NEXT_PUBLIC_PRIVACY_EMAIL` at
+  it. Additional addresses should be aliases into that one mailbox, never separate
+  accounts.
+- **Sendy brand**: `Member Perk Club`.
+- **Member welcome list ID**: `1QPsrUh892R9dNEZBaFGK2cg` — members only.
+- **Unsubscribe redirect**: set that list's unsubscribe URL in Sendy to
+  `https://memberperkclub.com/unsubscribed`. The page confirms removal, states plainly
+  that the membership is still active and that new benefits are announced on the
+  dashboard instead, and explains that account email (welcome, password reset, receipts,
+  renewal) still sends because it isn't marketing. `noindex` + robots-blocked.
+- **Transactional vs bulk**: transactional mail goes through SMTP2GO on the root domain.
+  Sendy campaigns should send from a bulk subdomain with their own SPF/DKIM, with
+  Reply-To pointing back at `club@` so replies land in the one mailbox.
 - **Counsel review**: `/terms`, `/privacy`, `/disclaimer` need a lawyer's pass, especially the
   governing-law/venue placeholder in Terms §10 and the two-membership-path clauses.
 - **Future flat-monthly producer plan**: `producers.billing_mode` (`per_client`|`flat_monthly`)
