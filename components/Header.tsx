@@ -33,7 +33,12 @@ export default async function Header() {
           ) : (
             <>
               <Link href="/login" className="btn btn-ghost hidden sm:inline-flex">Log in</Link>
-              <Link href="/join" className="btn btn-primary">Join</Link>
+              {/* Two distinct audiences, two distinct buttons: a consumer joining
+                  and an agent opening a reseller account are not the same action. */}
+              <Link href="/producer-signup" className="btn btn-deal hidden lg:inline-flex">
+                <Icon name="case" /> Producer signup
+              </Link>
+              <Link href="/join" className="btn btn-primary">Join as a member</Link>
             </>
           )}
           <MobileNav loggedIn={!!profile} dashboardHref={dashboardHref} />

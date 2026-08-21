@@ -50,8 +50,11 @@ export default function MobileNav({ loggedIn, dashboardHref }: { loggedIn: boole
           ) : (
             <>
               <Link href="/login" onClick={() => setOpen(false)}>Log in</Link>
+              <Link href="/producer-signup" onClick={() => setOpen(false)} className="font-semibold" style={{ color: "var(--violet)" }}>
+                Producer signup
+              </Link>
               <Link href="/join" onClick={() => setOpen(false)} className="font-semibold" style={{ color: "var(--violet)" }}>
-                Join
+                Join as a member
               </Link>
             </>
           )}

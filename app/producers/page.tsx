@@ -68,6 +68,13 @@ export default function ProducersPage() {
           decide what, if anything, your client pays for it.
         </p>
 
+        <div className="herocta" style={{ marginTop: 22 }}>
+          <Link href="/producer-signup" className="btn btn-primary">
+            <Icon name="user" /> Open a free producer account
+          </Link>
+          <Link href="#why" className="btn btn-ghost">See how it works</Link>
+        </div>
+
         <MarginCalculator />
 
         <div className="three">
@@ -81,7 +88,7 @@ export default function ProducersPage() {
           ))}
         </div>
 
-        <div className="panel" style={{ marginTop: 30 }}>
+        <div className="panel" id="why" style={{ marginTop: 30 }}>
           <h2 className="display" style={{ fontSize: 22 }}>Why producers use it</h2>
           <ul className="ticks">
             {WHY.map((w) => (

@@ -164,12 +164,19 @@ export async function sendProducerWelcomeEmail(opts: {
 }) {
   const { to, firstName, businessName, tempPassword, setPasswordLink } = opts;
 
+  // Three cases, and the third one matters: a producer who signed themselves
+  // up has neither a temp password nor a set-password link — they already
+  // received a magic link from the auth provider, so pointing them at a
+  // second credential flow would just confuse them.
   const credentialsHtml = tempPassword
     ? `<p>Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.</p>
        <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Log in to your producer account &rarr;</a></p>`
-    : `<p>Click below to set your password and activate your producer account:</p>
-       <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
-       <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`;
+    : setPasswordLink
+      ? `<p>Click below to set your password and activate your producer account:</p>
+         <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
+         <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`
+      : `<p>Sign in any time with the one-time link we sent you separately, or request a fresh one from the login page.</p>
+         <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Go to the login page &rarr;</a></p>`;
 
   const html = wrap(
     "Your producer account is ready",
@@ -190,10 +197,16 @@ export async function sendProducerWelcomeEmail(opts: {
      <p>Questions? Just reply to this email.</p>`
   );
 
+  const credentialsText = tempPassword
+    ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.`
+    : setPasswordLink
+      ? `Set your password: ${setPasswordLink}`
+      : `Sign in with the one-time link we sent you separately, or request a fresh one at ${SITE_URL}/login`;
+
   const text = `Your MemberPerkClub producer account is ready
 
 We've set up a producer account for ${businessName}.
-${tempPassword ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.` : `Set your password: ${setPasswordLink}`}
+${credentialsText}
 
 How it works:
 - You buy memberships at the $12 wholesale rate.

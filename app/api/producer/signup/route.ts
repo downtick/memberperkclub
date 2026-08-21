@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProducerSignupSchema } from "@/lib/schemas";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendProducerSignupAdminNotice } from "@/lib/emails";
+import { sendProducerSignupAdminNotice, sendProducerWelcomeEmail } from "@/lib/emails";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 function getClientIp(request: NextRequest): string {
@@ -79,6 +79,16 @@ export async function POST(request: NextRequest) {
   });
 
   await admin.from("member_events").insert({ member_id: userId, event: "joined", detail: { role: "producer" } });
+
+  // The producer's own welcome — how the wholesale model works and, above all,
+  // the link to add a payment method, without which they cannot enroll anyone.
+  // No credentials here: they sign in with the magic link sent by the auth
+  // provider immediately after this call.
+  await sendProducerWelcomeEmail({
+    to: email,
+    firstName,
+    businessName,
+  }).catch((err) => console.error("Producer welcome email error:", err));
 
   await sendProducerSignupAdminNotice({
     firstName, lastName, businessName, email, phone,
