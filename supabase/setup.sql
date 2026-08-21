@@ -1,6 +1,6 @@
 -- MemberPerkClub — one-shot database setup
 -- Paste this whole file into the Supabase SQL Editor and press Run.
--- Safe to re-run: tables use "if not exists", triggers/policies are dropped
+-- Safe to re-run: tables use "if not exists", policies/triggers are dropped
 -- and recreated, and the seed inserts are conflict-guarded.
 
 -- ============================================================================
@@ -243,7 +243,7 @@ create table if not exists stripe_events (
 -- member_access view — the SINGLE gating source of truth. Every dashboard
 -- route and RLS policy checks has_access, never membership_status directly.
 -- ============================================================================
-create or replace view member_access as
+create or replace view member_access with (security_invoker = true) as
 select
   p.*,
   (
@@ -251,6 +251,25 @@ select
     or (p.comp_until is not null and p.comp_until > now())
   ) as has_access
 from profiles p;
+
+-- ============================================================================
+-- is_admin() — SECURITY DEFINER so it reads profiles with RLS bypassed.
+-- A policy ON profiles that sub-queries profiles makes Postgres raise
+-- "infinite recursion detected in policy for relation profiles", which would
+-- break every profile read on the site. Routing the admin check through this
+-- function is what avoids that.
+-- ============================================================================
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles where id = auth.uid() and role = 'admin'
+  );
+$$;
 
 -- ============================================================================
 -- Row Level Security
@@ -268,14 +287,20 @@ alter table stripe_events enable row level security;
 -- Sensitive billing/role columns are protected from direct client updates —
 -- only server actions using the service-role key (after requireAdmin()/
 -- Stripe webhook verification) may change them.
+drop policy if exists "own profile read" on profiles;
 create policy "own profile read" on profiles for select
   using (auth.uid() = id);
+drop policy if exists "admins read all profiles" on profiles;
 create policy "admins read all profiles" on profiles for select
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
-create policy "own profile update basic fields" on profiles for update
-  using (auth.uid() = id);
+  using (public.is_admin());
+-- Deliberately NO self-update policy on profiles. Every profile write goes
+-- through the service-role client in server actions; RLS cannot restrict
+-- columns, so a self-update policy would also let a member set their own
+-- role='admin' or extend their own comp_until. Members change email/password
+-- via supabase.auth.updateUser(), which touches auth.users, not this table.
+drop policy if exists "admins manage all profiles" on profiles;
 create policy "admins manage all profiles" on profiles for all
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
 revoke update (
   role, member_number, plan, membership_status, billing_source, comp_until,
@@ -286,56 +311,69 @@ revoke update (
 -- producers: a producer can read/update their own row; admins manage all.
 -- A member may also read the business_name of the producer who enrolled them,
 -- so their dashboard can render "Your membership is provided by …".
+drop policy if exists "own producer row" on producers;
 create policy "own producer row" on producers for select
   using (auth.uid() = id);
+drop policy if exists "enrolled member reads their producer" on producers;
 create policy "enrolled member reads their producer" on producers for select
   using (exists (
     select 1 from profiles p where p.id = auth.uid() and p.producer_id = producers.id
   ));
+drop policy if exists "admins manage producers" on producers;
 create policy "admins manage producers" on producers for all
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
 -- member_events: admins read everything; a member/producer can read their own
 -- non-sensitive timeline
+drop policy if exists "admins read all events" on member_events;
 create policy "admins read all events" on member_events for select
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
+drop policy if exists "own timeline read" on member_events;
 create policy "own timeline read" on member_events for select
   using (auth.uid() = member_id);
+drop policy if exists "admins write events" on member_events;
 create policy "admins write events" on member_events for insert
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'))
-  with check (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  with check (public.is_admin());
 
 -- resources: readable by any member/producer/admin with has_access; admins
 -- manage (insert/update/delete) via service-role in server actions
+drop policy if exists "active members read resources" on resources;
 create policy "active members read resources" on resources for select
   using (
     active and exists (
       select 1 from member_access m where m.id = auth.uid() and (m.has_access or m.role in ('admin','producer'))
     )
   );
+drop policy if exists "admins manage resources" on resources;
 create policy "admins manage resources" on resources for all
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
+drop policy if exists "members log clicks" on resource_clicks;
 create policy "members log clicks" on resource_clicks for insert
   with check (auth.uid() = profile_id);
+drop policy if exists "admins read clicks" on resource_clicks;
 create policy "admins read clicks" on resource_clicks for select
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
 -- articles: same gate as resources
+drop policy if exists "active members read articles" on articles;
 create policy "active members read articles" on articles for select
   using (
     published and exists (
       select 1 from member_access m where m.id = auth.uid() and (m.has_access or m.role in ('admin','producer'))
     )
   );
+drop policy if exists "admins manage articles" on articles;
 create policy "admins manage articles" on articles for all
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
 -- email_log / stripe_events: admin only, otherwise server (service-role) only
+drop policy if exists "admins read email log" on email_log;
 create policy "admins read email log" on email_log for select
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
+drop policy if exists "admins read stripe events" on stripe_events;
 create policy "admins read stripe events" on stripe_events for select
-  using (exists (select 1 from profiles a where a.id = auth.uid() and a.role = 'admin'));
+  using (public.is_admin());
 
 -- ============================================================================
 -- Seed: first admin. Replace the email, then run once after your first
