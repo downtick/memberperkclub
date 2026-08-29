@@ -200,6 +200,64 @@ charge?" guide so a new producer can sell the day after signing up.
 **Dropped by decision:** Turnstile. The contact form keeps its honeypot and IP
 rate-limiting; no CAPTCHA will be added.
 
+## Stripe setup (do this in order)
+
+### What to create in Stripe
+
+**One Price, not two.** Only the retail membership is a Stripe Price:
+
+- **Product**: `MemberPerkClub Membership`
+- **Price**: `$149.00 USD`, **recurring, yearly**. Copy the id — it starts with
+  `price_`, NOT `prod_`. Pasting the product id is the most common setup mistake
+  and the resulting error is unhelpful.
+
+The **$12 producer wholesale rate is NOT a Stripe Price.** It is charged as an
+ad-hoc PaymentIntent from `PRODUCER_ENROLLMENT_FEE_CENTS` in `lib/stripe.ts`, so
+creating a $12 price would sit unused. To change the wholesale rate you edit that
+constant and redeploy. (Optional future change: move it to a Price + env var so
+the rate can be changed in Stripe without a deploy.)
+
+### Vercel variables, in the order they become available
+
+Set these under Settings → Environment Variables, then **redeploy** — env changes
+do not apply to an existing build.
+
+| Variable | Where it comes from | When |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | Developers → API keys → Secret key (`sk_...`) | immediately |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | same page, publishable key (`pk_...`) | immediately |
+| `STRIPE_PRICE_ANNUAL` | the $149/yr Price id (`price_...`) | immediately |
+| `STRIPE_WEBHOOK_SECRET` | the endpoint's signing secret (`whsec_...`) | **only after the first deploy** |
+
+The webhook secret is last because Stripe cannot create the endpoint until the URL
+exists. After deploying with the first three, add the endpoint:
+
+- URL: `https://memberperkclub.com/api/stripe/webhook`
+- Events: `checkout.session.completed`, `customer.subscription.updated`,
+  `customer.subscription.deleted`, `invoice.payment_failed`
+
+then paste its `whsec_` secret into Vercel and redeploy once more.
+
+### Still-missing non-Stripe variables
+
+`SMTP2GO_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFY_EMAIL` (all `club@memberperkclub.com`
+for the last two), and confirm `NEXT_PUBLIC_SITE_URL=https://memberperkclub.com`
+and `NEXT_PUBLIC_SITE_LEGAL_ENTITY` names the entity that actually exists.
+
+Hit `/api/health` after any deploy — it reports which of these are present as
+booleans, without exposing any key material.
+
+### Gotchas
+
+- **Test and live keys never mix.** A `price_` id created in test mode does not
+  exist in live mode. Switching modes means re-creating the product and swapping
+  all four values together.
+- **Set the statement descriptor** (Settings → Public details) to something a
+  member will recognise on a card statement. An unrecognised descriptor is one of
+  the most common causes of chargebacks on subscription products.
+- Because producer-enrolled memberships are one-time charges, they never appear
+  as subscriptions in Stripe — only the $149 retail memberships do.
+
 ## Email &amp; Sendy
 
 - **Single mailbox**: `club@memberperkclub.com` handles everything. Point `EMAIL_FROM`,
