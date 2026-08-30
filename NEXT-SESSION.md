@@ -41,29 +41,64 @@ checkout will fail with a raw Stripe error instead of the friendly
 Database is built: `supabase/setup.sql` ran successfully (9 tables, 17 policies,
 31 perks, 11 articles).
 
-## THE IMMEDIATE TASK — create the Stripe product
+## THE IMMEDIATE TASK — create the Stripe product, THEN put its id in Vercel
 
-The Stripe MCP connector is now connected. Create **one** product:
+This is a **two-part job and both halves are required.** Creating the product in
+Stripe does nothing on its own; the site only learns about it through an
+environment variable. Do not report this as done after part one.
+
+### Part 1 — create it in Stripe (you, via the Stripe MCP connector)
+
+The connector is now connected, so create this directly rather than asking the
+user to click through the dashboard:
 
 - **Product**: `MemberPerkClub Membership`
 - **Price**: `$149.00 USD`, **recurring, yearly**
-- Put the resulting id (starts with `price_`, NOT `prod_`) into
-  `STRIPE_PRICE_ANNUAL` in Vercel, then redeploy.
+
+Then read back the created **Price id** — it starts with `price_`, not `prod_`.
+Give the user that exact string.
 
 **Do NOT create a $12 price.** The producer wholesale rate is charged as a
 PaymentIntent with the amount set inline from `PRODUCER_ENROLLMENT_FEE_CENTS =
-1200` in `lib/stripe.ts`. A $12 Price would sit unused and mislead anyone trying
-to change the rate later.
+1200` in `lib/stripe.ts`. A $12 Price would sit unused and mislead anyone who
+later tries to change the rate by editing it.
 
-*Open question for the user:* they may prefer to move the $12 into Stripe as a
-Price + `STRIPE_PRICE_PRODUCER` env var so the wholesale rate can change without
-a deploy. Worth it only if the rate is expected to move. Ask before building.
+*Open question to ask the user:* they may prefer the $12 to live in Stripe as a
+Price plus a `STRIPE_PRICE_PRODUCER` env var, so the wholesale rate can change
+without a deploy. Worth it only if the rate is expected to move. Ask first.
 
-Then confirm the webhook exists at
-`https://memberperkclub.com/api/stripe/webhook` subscribed to
-`checkout.session.completed`, `customer.subscription.updated`,
+### Part 2 — the user adds it to Vercel
+
+Give them the variable name and the value, and say so explicitly:
+
+```
+STRIPE_PRICE_ANNUAL = price_...        (the id from part 1)
+```
+
+Vercel → Settings → Environment Variables. Applied to Production, Preview and
+Development. **Then redeploy** — env changes never reach an existing build.
+
+### Part 3 — verify the webhook
+
+Confirm an endpoint exists at `https://memberperkclub.com/api/stripe/webhook`
+subscribed to `checkout.session.completed`, `customer.subscription.updated`,
 `customer.subscription.deleted`, `invoice.payment_failed`, and that
-`STRIPE_WEBHOOK_SECRET` holds that endpoint's real `whsec_` secret.
+`STRIPE_WEBHOOK_SECRET` in Vercel holds that endpoint's real `whsec_` secret
+rather than a placeholder. The webhook must be created *after* a deploy exists,
+because Stripe validates the URL.
+
+### Vercel env-var gotchas already hit on this project
+
+- **`NEXT_PUBLIC_*` variables must be typed "Config", not Sensitive/Secret.**
+  Next.js inlines them at build time; the protected type blocks that read and the
+  value silently arrives empty — the build still succeeds. Vercel does not allow
+  changing a variable's type after creation, so it must be deleted and re-added.
+- Sensitive values cannot be read back (`vercel env pull` returns them blank), so
+  a secret can only be verified by a real functional test, never by inspection.
+- `/api/health` reports which variables are **present**, not whether they are
+  valid. A leftover `price_REPLACE_ME` reads as present and is worse than an
+  empty value: the friendly "checkout isn't configured yet" path only triggers on
+  an *empty* string, so a placeholder throws a raw Stripe error at visitors.
 
 ## Punchlist after Stripe
 
