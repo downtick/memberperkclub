@@ -59,10 +59,10 @@ and `STRIPE_WEBHOOK_SECRET` values already sitting in Vercel were placeholders
 or test-mode ids — `/api/health` reported both as present the whole time. Both
 MUST be overwritten; neither could ever have worked.
 
-No $12 price was created. The producer wholesale rate stays a PaymentIntent with
-the amount set inline from `PRODUCER_ENROLLMENT_FEE_CENTS = 1200` in
-`lib/stripe.ts`. *Open question still unanswered:* move it to a Stripe Price +
-`STRIPE_PRICE_PRODUCER` env var only if the rate is expected to change.
+No $12 price was created, and that is now a settled decision: the rate is not
+expected to move, so it stays inline as `PRODUCER_ENROLLMENT_FEE_CENTS = 1200`
+in `lib/stripe.ts`. Do not add `STRIPE_PRICE_PRODUCER`. See punchlist item 9 for
+the bulk tier that *will* eventually need its own handling.
 
 ### REMAINING — the user sets these in Vercel, then redeploys
 
@@ -133,6 +133,20 @@ in Vercel runtime logs. Verify by running one real checkout after the redeploy.
    the margin calculator beside the form, and a flyer / sample email copy /
    "what should I charge?" guide. Design was agreed in detail; not built.
 8. **Six of eleven articles are still stubs.**
+9. **Bulk producer tier — planned, not built.** A flat **$295 for up to 500
+   enrollments**, alongside the existing $12-per-membership rate. Nothing exists
+   for this yet: no Stripe object, no code path, no UI. Open design questions to
+   settle before building — is $295 a single up-front charge for a block of 500
+   seats, or a cap that a producer grows into? What happens at seat 501? Does an
+   unused balance expire or roll over? Like the $12 rate it is producer-facing
+   wholesale, so it must never surface as a consumer pricing option. Because this
+   is a second rate, the earlier reasoning against `STRIPE_PRICE_PRODUCER` weakens
+   — revisit whether both tiers should become real Stripe Prices when this is
+   built.
+10. **Stripe branding assets are generated but not uploaded.** PNGs live in
+   `public/brand/` (see below). The user uploads them in the Stripe Dashboard —
+   Settings -> Business -> Branding. There is no API path for this on a
+   non-Connect account.
 
 **Dropped by decision:** Turnstile. Honeypot + IP rate limiting only. Do not
 re-add it.
@@ -155,3 +169,20 @@ re-add it.
   hardcode it.
 - One mailbox for the whole business: `club@memberperkclub.com`. Anything else
   is an alias, never a second account.
+
+## Brand assets
+
+Generated from the canonical spec, not redrawn: the `i-spark` polygon from
+`components/IconSprite.tsx` on the `.mark` gradient from `app/globals.css`
+(`linear-gradient(145deg, #A97BFF, #6733CC)`), wordmark in system-ui Semibold to
+match `.logo`'s `font-weight: 600`.
+
+| File | Size | Use |
+|---|---|---|
+| `public/brand/stripe-icon-512.png` | 512x512 | Stripe **Icon**. Full-bleed square on purpose so Stripe's own rounding/cropping cannot clip a pre-rounded corner. |
+| `public/brand/stripe-logo-wordmark.png` | 1539x256, transparent | Stripe **Logo** (invoices, receipts, hosted Checkout). |
+| `public/brand/mark-rounded-512.png` | 512x512 | The header mark as a standalone raster — favicons, social, app icons. |
+
+Regenerate with `python3` from the script kept alongside this work; the shapes
+are derived from source, so if the sprite or the gradient changes, regenerate
+rather than hand-editing the PNGs.
