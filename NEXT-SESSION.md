@@ -33,59 +33,52 @@ Public pricing advertises exactly one price: $149/year.
 `GET https://memberperkclub.com/api/health` reports every integration present:
 Supabase (public + service role), SMTP2GO (key, from, admin notify), and all four
 Stripe values. **Presence is not validity** — that endpoint only checks the
-variables are non-empty. If `STRIPE_PRICE_ANNUAL` is still `price_REPLACE_ME`,
-checkout will fail with a raw Stripe error instead of the friendly
-"not configured yet" message, because the friendly path only triggers on an
-*empty* value.
+variables are non-empty, and this project has already been burned by exactly
+that. As of 2026-08-29 the live Stripe account contained no products, prices or
+webhook endpoints at all, yet health reported `annualPrice: true` and
+`webhookSecret: true`. Real objects now exist (see below), but the two Vercel
+variables still hold the old placeholder values until they are replaced.
 
 Database is built: `supabase/setup.sql` ran successfully (9 tables, 17 policies,
 31 perks, 11 articles).
 
-## THE IMMEDIATE TASK — create the Stripe product, THEN put its id in Vercel
+## THE IMMEDIATE TASK — Stripe objects created; env vars are now the only blocker
 
-This is a **two-part job and both halves are required.** Creating the product in
-Stripe does nothing on its own; the site only learns about it through an
-environment variable. Do not report this as done after part one.
+**Done in Stripe (live mode, account `acct_1U9vffGxZ5qOKVch` "MemberPerkClub") on 2026-08-29:**
 
-### Part 1 — create it in Stripe (you, via the Stripe MCP connector)
+- Product `MemberPerkClub Membership` -> `prod_VAHHxcE7s0DHDl`
+- Price **`price_1U9wizGxZ5qOKVchp7gjQgbJ`** — verified `active`, USD `14900`,
+  `recurring.interval: year`, `livemode: true`
+- Webhook endpoint -> `we_1U9wjKGxZ5qOKVchJ7LtthFl` at
+  `https://memberperkclub.com/api/stripe/webhook`, status `enabled`, subscribed
+  to exactly the four events the handler switches on.
 
-The connector is now connected, so create this directly rather than asking the
-user to click through the dashboard:
+**Critical finding:** before this work the account had **zero products, zero
+prices and zero webhook endpoints** in live mode. So the `STRIPE_PRICE_ANNUAL`
+and `STRIPE_WEBHOOK_SECRET` values already sitting in Vercel were placeholders
+or test-mode ids — `/api/health` reported both as present the whole time. Both
+MUST be overwritten; neither could ever have worked.
 
-- **Product**: `MemberPerkClub Membership`
-- **Price**: `$149.00 USD`, **recurring, yearly**
+No $12 price was created. The producer wholesale rate stays a PaymentIntent with
+the amount set inline from `PRODUCER_ENROLLMENT_FEE_CENTS = 1200` in
+`lib/stripe.ts`. *Open question still unanswered:* move it to a Stripe Price +
+`STRIPE_PRICE_PRODUCER` env var only if the rate is expected to change.
 
-Then read back the created **Price id** — it starts with `price_`, not `prod_`.
-Give the user that exact string.
-
-**Do NOT create a $12 price.** The producer wholesale rate is charged as a
-PaymentIntent with the amount set inline from `PRODUCER_ENROLLMENT_FEE_CENTS =
-1200` in `lib/stripe.ts`. A $12 Price would sit unused and mislead anyone who
-later tries to change the rate by editing it.
-
-*Open question to ask the user:* they may prefer the $12 to live in Stripe as a
-Price plus a `STRIPE_PRICE_PRODUCER` env var, so the wholesale rate can change
-without a deploy. Worth it only if the rate is expected to move. Ask first.
-
-### Part 2 — the user adds it to Vercel
-
-Give them the variable name and the value, and say so explicitly:
+### REMAINING — the user sets these in Vercel, then redeploys
 
 ```
-STRIPE_PRICE_ANNUAL = price_...        (the id from part 1)
+STRIPE_PRICE_ANNUAL   = price_1U9wizGxZ5qOKVchp7gjQgbJ
+STRIPE_WEBHOOK_SECRET = whsec_KvYSeLXzSysfGd65z24WtRxutnZ5IY8a
 ```
 
-Vercel → Settings → Environment Variables. Applied to Production, Preview and
+Vercel -> Settings -> Environment Variables, applied to Production, Preview and
 Development. **Then redeploy** — env changes never reach an existing build.
+The webhook signing secret is shown by Stripe only at creation time; if it is
+lost, roll it on the endpoint rather than hunting for it.
 
-### Part 3 — verify the webhook
-
-Confirm an endpoint exists at `https://memberperkclub.com/api/stripe/webhook`
-subscribed to `checkout.session.completed`, `customer.subscription.updated`,
-`customer.subscription.deleted`, `invoice.payment_failed`, and that
-`STRIPE_WEBHOOK_SECRET` in Vercel holds that endpoint's real `whsec_` secret
-rather than a placeholder. The webhook must be created *after* a deploy exists,
-because Stripe validates the URL.
+Note `/api/stripe/checkout` swallows Stripe errors into a generic 500, so a bad
+price id surfaces to visitors as "Unable to start checkout" and is visible only
+in Vercel runtime logs. Verify by running one real checkout after the redeploy.
 
 ### Vercel env-var gotchas already hit on this project
 
