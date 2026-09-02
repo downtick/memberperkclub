@@ -49,6 +49,16 @@ Database is built: `supabase/setup.sql` ran successfully (9 tables, 17 policies,
 - Product `MemberPerkClub Membership` -> `prod_VAHHxcE7s0DHDl`
 - Price **`price_1U9wizGxZ5qOKVchp7gjQgbJ`** — verified `active`, USD `14900`,
   `recurring.interval: year`, `livemode: true`
+
+> **Duplicate warning.** On 2026-08-14 a second session created another live
+> product with the same name (`prod_VBVRQSHO1Gpenc` /
+> `price_1UB8QgGxZ5qOKVchj1FdKCyi`) because it did not list existing products
+> first. That product has been **archived** (`active: false`) and its description
+> marked as a duplicate. Its price could not be deactivated — the connector's key
+> lacks `PostPricesPrice` permission — so the price object still exists and is
+> technically usable. **Never put it in `STRIPE_PRICE_ANNUAL`.** The only correct
+> value is `price_1U9wizGxZ5qOKVchp7gjQgbJ`. Before creating anything in Stripe,
+> list what already exists.
 - Webhook endpoint -> `we_1U9wjKGxZ5qOKVchJ7LtthFl` at
   `https://memberperkclub.com/api/stripe/webhook`, status `enabled`, subscribed
   to exactly the four events the handler switches on.
