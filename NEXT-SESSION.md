@@ -28,67 +28,54 @@ word "card" appears only in payment contexts. Two ways to become a member:
 The producer-provided path is **never** shown as a consumer pricing option.
 Public pricing advertises exactly one price: $149/year.
 
-## State as of this handoff
+## State as of this handoff (2026-09-20)
 
-`GET https://memberperkclub.com/api/health` reports every integration present:
-Supabase (public + service role), SMTP2GO (key, from, admin notify), and all four
-Stripe values. **Presence is not validity** — that endpoint only checks the
-variables are non-empty, and this project has already been burned by exactly
-that. As of 2026-08-29 the live Stripe account contained no products, prices or
-webhook endpoints at all, yet health reported `annualPrice: true` and
-`webhookSecret: true`. Real objects now exist (see below), but the two Vercel
-variables still hold the old placeholder values until they are replaced.
+### THE ONE BLOCKER — `STRIPE_SECRET_KEY` is invalid
 
-Database is built: `supabase/setup.sql` ran successfully (9 tables, 17 policies,
-31 perks, 11 articles).
+`GET /api/health?deep=1` returns `keyValid: false`,
+`keyErrorType: "StripeAuthenticationError"`. Stripe rejects the credential
+outright. This breaks producer card setup, the $12 enrollment, and the $149
+checkout. The user must replace it from Stripe -> Developers -> API keys on
+account `acct_1U9vffGxZ5qOKVch`, then redeploy.
 
-## THE IMMEDIATE TASK — Stripe objects created; env vars are now the only blocker
+**Use `?deep=1` from now on.** The plain `/api/health` checks only that a
+variable is non-empty, which reported all-green for weeks while the key was
+dead. `?deep=1` actually calls Stripe (`balance.retrieve`, then
+`prices.retrieve`) and reports `keyValid`, `priceValid`, `priceIsLive`,
+`priceIsRecurring`, `priceAmount`. Never trust the shallow endpoint again.
 
-**Done in Stripe (live mode, account `acct_1U9vffGxZ5qOKVch` "MemberPerkClub") on 2026-08-29:**
+### Done this session
 
-- Product `MemberPerkClub Membership` -> `prod_VAHHxcE7s0DHDl`
-- Price **`price_1U9wizGxZ5qOKVchp7gjQgbJ`** — verified `active`, USD `14900`,
-  `recurring.interval: year`, `livemode: true`
+- **Stripe objects created (live)**: product `prod_VAHHxcE7s0DHDl`, price
+  `price_1U9wizGxZ5qOKVchp7gjQgbJ` ($149/yr recurring), webhook
+  `we_1U9wjKGxZ5qOKVchJ7LtthFl` on the four events the handler switches on.
+- **Env vars fixed.** Eight `NEXT_PUBLIC_*` vars had been created as
+  *Sensitive*, so Next.js could not inline them and they arrived empty while
+  the build still succeeded. All re-added as **Config**. Verified for real by
+  downloading the deployed JS chunks and grepping for the Supabase host and
+  anon key — both present and exact.
+- **Supabase**: redirect allow-list was **completely empty** (the cause of
+  magic links landing on localhost) - now 3 entries. Custom SMTP enabled via
+  SMTP2GO by the user. All three auth email templates replaced with branded
+  versions (larger 17px button, arrow, fallback URL).
+- **Member numbers** restart at **1001** with 4-digit padding, so members see
+  `1001` and not `001001`. Verified live: the first producer got `MPC-1001`.
+- **Two real bugs fixed.** Producer-enrolled members were sent a welcome email
+  containing `href="undefined"` because `createUser()` sets no password and no
+  set-password link was generated - they had no way into their account. And
+  the enroll form let a producer fill in a client's full details before
+  revealing no card was on file.
+- **New**: `EMAIL_BCC` (silent archive copy of every outbound email),
+  producer "your client is enrolled" confirmation email, `logStripeError`
+  shared helper so Stripe failures are greppable in logs instead of being
+  swallowed into "Unable to ...".
 
-> **Duplicate warning.** On 2026-08-14 a second session created another live
-> product with the same name (`prod_VBVRQSHO1Gpenc` /
-> `price_1UB8QgGxZ5qOKVchj1FdKCyi`) because it did not list existing products
-> first. That product has been **archived** (`active: false`) and its description
-> marked as a duplicate. Its price could not be deactivated — the connector's key
-> lacks `PostPricesPrice` permission — so the price object still exists and is
-> technically usable. **Never put it in `STRIPE_PRICE_ANNUAL`.** The only correct
-> value is `price_1U9wizGxZ5qOKVchp7gjQgbJ`. Before creating anything in Stripe,
-> list what already exists.
-- Webhook endpoint -> `we_1U9wjKGxZ5qOKVchJ7LtthFl` at
-  `https://memberperkclub.com/api/stripe/webhook`, status `enabled`, subscribed
-  to exactly the four events the handler switches on.
+### Test state
 
-**Critical finding:** before this work the account had **zero products, zero
-prices and zero webhook endpoints** in live mode. So the `STRIPE_PRICE_ANNUAL`
-and `STRIPE_WEBHOOK_SECRET` values already sitting in Vercel were placeholders
-or test-mode ids — `/api/health` reported both as present the whole time. Both
-MUST be overwritten; neither could ever have worked.
-
-No $12 price was created, and that is now a settled decision: the rate is not
-expected to move, so it stays inline as `PRODUCER_ENROLLMENT_FEE_CENTS = 1200`
-in `lib/stripe.ts`. Do not add `STRIPE_PRICE_PRODUCER`. See punchlist item 9 for
-the bulk tier that *will* eventually need its own handling.
-
-### REMAINING — the user sets these in Vercel, then redeploys
-
-```
-STRIPE_PRICE_ANNUAL   = price_1U9wizGxZ5qOKVchp7gjQgbJ
-STRIPE_WEBHOOK_SECRET = whsec_KvYSeLXzSysfGd65z24WtRxutnZ5IY8a
-```
-
-Vercel -> Settings -> Environment Variables, applied to Production, Preview and
-Development. **Then redeploy** — env changes never reach an existing build.
-The webhook signing secret is shown by Stripe only at creation time; if it is
-lost, roll it on the endpoint rather than hunting for it.
-
-Note `/api/stripe/checkout` swallows Stripe errors into a generic 500, so a bad
-price id surfaces to visitors as "Unable to start checkout" and is visible only
-in Vercel runtime logs. Verify by running one real checkout after the redeploy.
+One producer exists: `downtick5@gmail.com`, `MPC-1001`, no card on file (blocked
+by the Stripe key). **These are test rows.** Delete them and re-run
+`alter sequence member_number_seq restart with 1001;` before real members, so
+the first real member is 1001.
 
 ### Vercel env-var gotchas already hit on this project
 
