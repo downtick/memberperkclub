@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ClientEnrollSchema } from "@/lib/schemas";
-import { getStripe, PRODUCER_ENROLLMENT_FEE_CENTS } from "@/lib/stripe";
+import { getStripe, PRODUCER_ENROLLMENT_FEE_CENTS, logStripeError } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWelcomeEmail, sendProducerEnrollmentConfirmation } from "@/lib/emails";
@@ -148,7 +148,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, memberNumber: memberProfile?.member_number });
   } catch (err) {
-    console.error("Producer enroll error:", err);
-    return NextResponse.json({ error: "Unable to process enrollment." }, { status: 500 });
+    const friendly = logStripeError("producer enroll", err);
+    return NextResponse.json(
+      { error: friendly || "Unable to process enrollment." },
+      { status: 500 }
+    );
   }
 }

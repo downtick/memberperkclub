@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, logStripeError } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,7 +41,10 @@ export async function POST() {
 
     return NextResponse.json({ clientSecret: setupIntent.client_secret });
   } catch (err) {
-    console.error("Producer setup-intent error:", err);
-    return NextResponse.json({ error: "Unable to start card setup." }, { status: 500 });
+    const friendly = logStripeError("producer setup-intent", err);
+    return NextResponse.json(
+      { error: friendly || "Unable to start card setup." },
+      { status: 500 }
+    );
   }
 }

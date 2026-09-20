@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe, STRIPE_PRICE_ANNUAL } from "@/lib/stripe";
+import { getStripe, STRIPE_PRICE_ANNUAL, logStripeError } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("Stripe checkout error:", err);
-    return NextResponse.json({ error: "Unable to start checkout." }, { status: 500 });
+    const friendly = logStripeError("checkout session", err);
+    return NextResponse.json(
+      { error: friendly || "Unable to start checkout." },
+      { status: 500 }
+    );
   }
 }
