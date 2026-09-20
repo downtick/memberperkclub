@@ -10,6 +10,12 @@ const SENDER = process.env.EMAIL_FROM || "members@memberperkclub.com";
 // signups, contact form) go here.
 const ADMIN_NOTIFY_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "admin@memberperkclub.com";
 
+// Silent archive copy of every outbound email, member-facing ones included.
+// BCC rather than CC or a second To: recipients must never see this address.
+// Intentionally env-only with NO fallback — the real address is an internal
+// mailbox and must not appear in the repo. Unset means no BCC, not a default.
+const EMAIL_BCC = process.env.EMAIL_BCC;
+
 export interface SendEmailArgs {
   to: string;
   subject: string;
@@ -34,6 +40,11 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailA
       body: JSON.stringify({
         api_key: SMTP2GO_API_KEY,
         to: [to],
+        // Skip the BCC when it is already the To: — admin notices would
+        // otherwise arrive twice in the same mailbox.
+        ...(EMAIL_BCC && EMAIL_BCC.toLowerCase() !== to.toLowerCase()
+          ? { bcc: [EMAIL_BCC] }
+          : {}),
         sender: SENDER,
         subject,
         html_body: html,

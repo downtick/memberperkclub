@@ -334,6 +334,11 @@ STRIPE_PRICE_ANNUAL=                  # Price id for the $149/yr retail subscrip
 SMTP2GO_API_KEY=
 EMAIL_FROM=members@memberperkclub.com # on-theme sender — not hello@
 ADMIN_NOTIFY_EMAIL=                   # back-end only, never shown on any page
+EMAIL_BCC=                            # silent archive copy of EVERY outbound
+                                      # email, member-facing ones included.
+                                      # BCC, so recipients never see it. No
+                                      # code default on purpose — the address
+                                      # must not live in the repo. Unset = off.
 
 # Site / brand (see "Open item: brand rename" above)
 NEXT_PUBLIC_SITE_URL=https://memberperkclub.com
