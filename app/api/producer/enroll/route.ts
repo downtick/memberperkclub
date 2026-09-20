@@ -3,7 +3,7 @@ import { ClientEnrollSchema } from "@/lib/schemas";
 import { getStripe, PRODUCER_ENROLLMENT_FEE_CENTS } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWelcomeEmail } from "@/lib/emails";
+import { sendWelcomeEmail, sendProducerEnrollmentConfirmation } from "@/lib/emails";
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -112,11 +112,38 @@ export async function POST(request: NextRequest) {
     });
 
     if (memberProfile) {
+      // createUser() above sets no password, so the member needs a real
+      // set-password link. Without this the welcome email rendered
+      // href="undefined" and the member had no route into the account.
+      // Non-fatal: the email falls back to /forgot-password if this fails.
+      let setPasswordLink: string | undefined;
+      try {
+        const { data: link } = await admin.auth.admin.generateLink({
+          type: "recovery",
+          email: memberProfile.email,
+        });
+        setPasswordLink = link?.properties?.action_link;
+      } catch (err) {
+        console.error("Set-password link error:", err);
+      }
+
       await sendWelcomeEmail({
         to: memberProfile.email,
         firstName: memberProfile.first_name || "",
         memberNumber: memberProfile.member_number || "",
+        setPasswordLink,
       }).catch((err) => console.error("Welcome email error:", err));
+
+      // Tell the producer their part is done. Never carries the member's
+      // set-password link — that credential is the member's alone.
+      await sendProducerEnrollmentConfirmation({
+        to: producerProfile.email,
+        producerFirstName: producerProfile.first_name || "",
+        clientFirstName: memberProfile.first_name || "",
+        clientLastName: memberProfile.last_name || "",
+        clientEmail: memberProfile.email,
+        memberNumber: memberProfile.member_number || "",
+      }).catch((err) => console.error("Producer confirmation email error:", err));
     }
 
     return NextResponse.json({ success: true, memberNumber: memberProfile?.member_number });

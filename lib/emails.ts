@@ -38,12 +38,18 @@ export async function sendWelcomeEmail(opts: {
   // Members never see the internal MPC- prefix — this is a membership, not a card.
   const memberDigits = (memberNumber || "").replace(/^MPC-/i, "");
 
+  // Three cases. The third is load-bearing: with neither a password nor a
+  // link, the old two-branch version emitted href="undefined" and the member
+  // had no way in at all. Fall back to the self-serve reset instead.
   const credentialsHtml = tempPassword
     ? `<p>Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.</p>
        <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Log in to your account &rarr;</a></p>`
-    : `<p>Click below to set your password and activate your account:</p>
-       <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
-       <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`;
+    : setPasswordLink
+      ? `<p>Click below to set your password and activate your account:</p>
+         <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
+         <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`
+      : `<p>To get in, set your password using the link below. Your login is <strong>${to}</strong>.</p>
+         <p><a href="${SITE_URL}/forgot-password" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>`;
 
   const html = wrap(
     "Welcome to MemberPerkClub",
@@ -61,7 +67,7 @@ export async function sendWelcomeEmail(opts: {
   const text = `Welcome to MemberPerkClub\n\nYour member number is ${memberDigits}.\n${
     tempPassword
       ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.`
-      : `Set your password: ${setPasswordLink}`
+      : `Set your password: ${setPasswordLink || `${SITE_URL}/forgot-password`}`
   }\n\nLog in at ${SITE_URL}/login`;
 
   const result = await sendEmail({ to, subject: "Welcome to MemberPerkClub", html, text });
@@ -218,4 +224,55 @@ Before you can enroll anyone, add a payment method:
 ${SITE_URL}/producer/payment-method`;
 
   return sendEmail({ to, subject: "Your MemberPerkClub producer account is ready", html, text });
+}
+
+
+// ── 5. Producer confirmation: "your client is enrolled" ───────────────────
+// Sent to the PRODUCER, not the member, the moment an enrollment succeeds.
+// Deliberately says nothing about price: the producer sets their own retail
+// price and the $12 wholesale rate is not this email's business. It also
+// never includes the member's password or set-password link — that is the
+// member's own credential and must not travel through a third party.
+export async function sendProducerEnrollmentConfirmation(opts: {
+  to: string;
+  producerFirstName: string;
+  clientFirstName: string;
+  clientLastName: string;
+  clientEmail: string;
+  memberNumber: string;
+}) {
+  const { to, producerFirstName, clientFirstName, clientLastName, clientEmail, memberNumber } = opts;
+  const clientName = `${clientFirstName} ${clientLastName}`.trim();
+  const memberDigits = (memberNumber || "").replace(/^MPC-/i, "");
+
+  const html = wrap(
+    "Your client is enrolled",
+    `<p>Hi ${producerFirstName || "there"},</p>
+     <p><strong>${clientName}</strong> is now an active MemberPerkClub member. Nothing further is needed from you &mdash; your part is done.</p>
+     <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+       <tr><td style="padding:8px 0;color:#665B7A;width:140px">Member</td><td style="padding:8px 0;color:${INK};font-weight:600">${clientName}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A">Email</td><td style="padding:8px 0;color:${INK}">${clientEmail}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A">Member no.</td><td style="padding:8px 0;color:${INK};font-family:monospace">${memberDigits}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A">Term</td><td style="padding:8px 0;color:${INK}">One year from today</td></tr>
+     </table>
+     <h3 style="color:${INK};font-size:16px;margin-top:24px">What happens next</h3>
+     <p>We have emailed ${clientFirstName || "your client"} a welcome message at <strong>${clientEmail}</strong> with their member number and a link to set their own password. Once they set it, they can sign in and start using their benefits right away.</p>
+     <p style="color:#665B7A;font-size:13px">If they say it never arrived, ask them to check spam first. You can resend it from your producer dashboard.</p>
+     <p><a href="${SITE_URL}/producer/dashboard" style="color:${VIOLET};font-weight:700">View your producer dashboard &rarr;</a></p>`
+  );
+
+  const text = `Your client is enrolled
+
+${clientName} is now an active MemberPerkClub member. Nothing further is needed from you.
+
+Member: ${clientName}
+Email: ${clientEmail}
+Member no.: ${memberDigits}
+Term: One year from today
+
+We have emailed ${clientFirstName || "your client"} at ${clientEmail} with their member number and a link to set their own password. Once they set it, they can sign in and start using their benefits.
+
+Producer dashboard: ${SITE_URL}/producer/dashboard`;
+
+  return sendEmail({ to, subject: `${clientName} is enrolled — MemberPerkClub`, html, text });
 }
