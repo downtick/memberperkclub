@@ -4,7 +4,7 @@ import { formatPhoneInput } from "@/lib/phone";
 import { STATES } from "@/lib/schemas";
 import Icon from "./Icon";
 
-export default function EnrollClientForm() {
+export default function EnrollClientForm({ hasPaymentMethod = true }: { hasPaymentMethod?: boolean }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +54,30 @@ export default function EnrollClientForm() {
 
   const eb = (n: string) => (errors[n] ? "var(--danger)" : undefined);
 
+  // Shown BEFORE the form rather than after a failed submit: a producer who
+  // has not saved a card cannot enroll anyone, and finding that out after
+  // typing in a client's details is the worst possible moment to learn it.
+  if (!hasPaymentMethod) {
+    return (
+      <div className="text-center py-2">
+        <p className="eyebrow" style={{ marginBottom: 10 }}>One more step</p>
+        <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font-display)" }}>
+          Add a payment method first
+        </h2>
+        <p className="text-[var(--ink-3)] mb-6" style={{ fontSize: 15, lineHeight: 1.6 }}>
+          You only do this once. Your card is stored by Stripe, never by us, and it is
+          charged $12 only at the moment you choose to enroll a client &mdash; never
+          automatically and never on a schedule.
+        </p>
+        <a href="/producer/payment-method" className="btn-primary" style={{ gap: 10 }}>
+          Add a payment method
+          <span className="nudge" aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    );
+  }
+
+
   return (
     <form onSubmit={handleSubmit} noValidate>
       <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
@@ -92,7 +116,12 @@ export default function EnrollClientForm() {
 
       {submitError && <div className="mb-5 p-3.5 rounded-lg text-sm" style={{ background: "var(--danger-wash)", border: "1px solid var(--danger)", color: "var(--danger)" }}><Icon name="info" />{submitError}</div>}
 
-      <button type="submit" disabled={submitting} className="btn-primary w-full justify-center">
+      <button
+        type="submit"
+        disabled={submitting || !hasPaymentMethod}
+        className="btn-primary w-full justify-center"
+        title={hasPaymentMethod ? undefined : "Add a payment method first"}
+      >
         {submitting ? "Charging $12 & enrolling…" : "Enroll client — charge $12"}
       </button>
       <p className="text-xs text-[var(--ink-3)] mt-3 text-center">

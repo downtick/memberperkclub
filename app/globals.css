@@ -462,3 +462,15 @@ ul.ticks li .ic { width: 19px; height: 19px; color: var(--violet); margin-top: 2
   body { background: #fff; color: #000; }
   .app, .card, .panel { box-shadow: none; border: none; }
 }
+
+/* Animated nudge arrow — draws the eye to a required next step (e.g. a
+   producer who has not yet saved a payment method). Motion is decorative
+   only: the label beside it already says what the button does. */
+.nudge { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nudge { animation: none; }
+}

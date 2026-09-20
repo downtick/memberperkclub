@@ -7,6 +7,13 @@ import { getStripe } from "@/lib/stripe";
 // should send an email quietly doesn't.
 export const dynamic = "force-dynamic";
 
+// Stripe's own `type`/`code` survive minification; `err.constructor.name`
+// does not — it comes back as a single mangled letter in production.
+function stripeErrorType(err: unknown): string {
+  const e = err as { type?: string; code?: string };
+  return e?.type || e?.code || "UnknownError";
+}
+
 export async function GET(request: Request) {
   const has = (v?: string) => Boolean(v && v.trim().length > 0);
 
@@ -69,13 +76,11 @@ export async function GET(request: Request) {
         stripeDeep.priceIsRecurring = price.type === "recurring";
         stripeDeep.priceAmount = price.unit_amount;
       } catch (err) {
-        stripeDeep.priceErrorType =
-          err instanceof Error ? err.constructor.name : "UnknownError";
+        stripeDeep.priceErrorType = stripeErrorType(err);
       }
     }
   } catch (err) {
-    stripeDeep.keyErrorType =
-      err instanceof Error ? err.constructor.name : "UnknownError";
+    stripeDeep.keyErrorType = stripeErrorType(err);
   }
 
   return NextResponse.json({ ...shallow, deep: { stripe: stripeDeep } });

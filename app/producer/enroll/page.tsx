@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { requireProducer } from "@/lib/access";
 import EnrollClientForm from "@/components/EnrollClientForm";
+import { producerHasPaymentMethod } from "@/lib/producer";
 
 export const metadata: Metadata = { title: "Enroll a Client" };
 
 export default async function EnrollPage() {
-  await requireProducer();
+  const profile = await requireProducer();
+  const hasPaymentMethod = await producerHasPaymentMethod(profile.id);
 
   return (
     <div className="max-w-lg">
@@ -14,7 +16,7 @@ export default async function EnrollPage() {
         One-time $12 wholesale charge to your saved payment method. Membership is active immediately for one year.
       </p>
       <div className="card p-6">
-        <EnrollClientForm />
+        <EnrollClientForm hasPaymentMethod={hasPaymentMethod} />
       </div>
     </div>
   );
