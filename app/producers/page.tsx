@@ -73,6 +73,7 @@ export default function ProducersPage() {
             <Icon name="user" /> Open a free producer account
           </Link>
           <Link href="/producers/getting-started" className="btn btn-ghost">Step-by-step guide</Link>
+          <Link href="/add-on-products-for-insurance-agents" className="btn btn-ghost">Why agencies add it</Link>
         </div>
 
         <MarginCalculator />
@@ -111,8 +112,8 @@ export default function ProducersPage() {
         <p className="note" style={{ marginTop: 24 }}>
           <Icon name="info" />
           <span>
-            <strong>Coming later:</strong> a flat monthly plan for agencies enrolling in volume —
-            up to 500 new memberships a month for one fee instead of $12 each.
+            <strong>Coming later:</strong> a flat <strong>$295 a month</strong> plan for agencies
+            enrolling in volume — up to 500 new memberships a month for one fee instead of $12 each.
           </span>
         </p>
 

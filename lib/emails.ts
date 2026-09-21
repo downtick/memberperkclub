@@ -345,7 +345,7 @@ export function buildProspectEmailHtml(postalAddress = "[YOUR MAILING ADDRESS â€
      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 6px;background:#F3EDFE;border-radius:12px">
        <tr><td style="padding:20px 22px">
          <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:${INK}">A savings membership you resell under your own agency</p>
-         <p style="margin:0;font-size:15px;line-height:1.6;color:#4C405F">You buy memberships at <strong>$12 wholesale</strong> and decide what your client pays &mdash; anything up to the $149 public price, or give it away to win or keep a policy. You keep the difference. Your account is free, with no contract and no monthly fee.</p>
+         <p style="margin:0;font-size:15px;line-height:1.6;color:#4C405F">You buy memberships at <strong>$12 wholesale</strong> and decide what your client pays &mdash; anything up to the $149 public price. You keep the difference. Your account is free, with no contract and no monthly fee.</p>
        </td></tr>
      </table>
      ${howItWorksHtml()}

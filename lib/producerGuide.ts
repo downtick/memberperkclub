@@ -82,7 +82,9 @@ export const BENEFIT_HIGHLIGHTS: { title: string; body: string }[] = [
 
 export const WHY_PRODUCERS: { lead: string; body: string }[] = [
   { lead: "Free to join.", body: "No contract, no monthly fee, no minimum." },
-  { lead: "You set the price.", body: "Buy at $12 wholesale and charge anything up to the $149 public price — or give it away to win or keep a policy. You keep the difference." },
+  // Deliberately no "give it away to win a policy": most states regulate
+  // rebating/inducements in connection with an insurance sale.
+  { lead: "You set the price.", body: "Buy at $12 wholesale and charge your client anything up to the $149 public price. You keep the difference." },
   { lead: "No licensing question.", body: "It's a consumer savings membership, not insurance, so there's no carrier appointment and no coverage to explain." },
   { lead: "Your name, all year.", body: "Every client you enroll sees your agency as the provider each time they sign in." },
   { lead: "Nothing to chase.", body: "One charge per membership. It never auto-renews, so there's no residual billing a year later." },

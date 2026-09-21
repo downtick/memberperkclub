@@ -257,3 +257,21 @@ Built: `/admin/prospects` (phone-first capture), `/api/admin/prospects`,
 20. **Bulk tier copy mismatch.** `/producers` says "a flat MONTHLY plan …
     up to 500 new memberships a month"; the user described a flat $295 for
     up to 500. Reconcile before building item 9.
+
+## Decisions 2026-09-21
+
+- **Bulk plan: $295 per MONTH for up to 500 new memberships a month** (user
+  confirmed). Supersedes the earlier "flat $295 for up to 500" note in item
+  9 and resolves item 20. Still not built. Unanswered design questions: do
+  unused slots roll over, what happens at membership 501 in a month, and
+  does a plan-enrolled membership still run one year each.
+- **Renewal built** (item 19 resolved): /api/producer/renew + daily
+  /api/cron/expiry-reminders. NEEDS `CRON_SECRET` in Vercel or the
+  reminders refuse to run — and the marketing page promises them.
+- **Rebating/inducement exposure — needs counsel.** /producers ("Give it
+  away to win a policy, bundle it into a service fee") and
+  components/MarginCalculator.tsx ("Many producers do exactly this to win
+  or keep…") suggest giving the membership away in connection with a
+  policy sale, which many states restrict. The calculator line also
+  asserts producer behaviour nobody can back yet. Removed from all new
+  copy; these two pre-existing lines await the user's decision.
