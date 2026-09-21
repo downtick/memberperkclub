@@ -227,3 +227,33 @@ rather than hand-editing the PNGs.
     (producer, MPC-1001) and `lantus30@gmail.com` (member, MPC-1002), refund
     the $12 in Stripe, then `alter sequence member_number_seq restart with
     1001;` so the first real member is 1001.
+
+## Convention prospect tool (built 2026-09-20) — setup still needed
+
+Built: `/admin/prospects` (phone-first capture), `/api/admin/prospects`,
+`lib/sendy.ts`, prospect email via `buildProspectEmailHtml()` in
+`lib/emails.ts`, Sendy check in `/api/health?deep=1`. NOT yet usable:
+
+1. **An admin must exist** — the page is admin-only and nobody is admin.
+2. **Sendy**: create list "Producer prospects" under brand Member Perk Club;
+   set `SENDY_URL`, `SENDY_API_KEY`, `SENDY_PROSPECT_LIST_ID` in Vercel
+   (server-side, Sensitive is fine); redeploy; `?deep=1` must show
+   `sendy.listValid: true`.
+3. **Autoresponder**: on that list, send immediately after subscription,
+   HTML from the admin page's "Copy HTML". Replace `[YOUR NAME]` and the
+   mailing-address placeholder first.
+4. **Postal address required** (CAN-SPAM) in every commercial email. The
+   business currently shows none anywhere.
+5. **SES** (Sendy's sender): confirm memberperkclub.com is verified with
+   SPF/DKIM and that the daily sending quota covers 1,000–2,000/week.
+6. Test end to end on a phone before the event, including Unsubscribe.
+
+## Product gaps found 2026-09-20
+
+19. **No renewal path for producer-enrolled members.** The enroll route
+    rejects any email that already exists (409), so after a client's year
+    ends the producer cannot renew them. Needs a renew action. The guide and
+    FAQ deliberately do not promise renewal until this exists.
+20. **Bulk tier copy mismatch.** `/producers` says "a flat MONTHLY plan …
+    up to 500 new memberships a month"; the user described a flat $295 for
+    up to 500. Reconcile before building item 9.
