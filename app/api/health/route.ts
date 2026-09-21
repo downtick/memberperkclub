@@ -83,5 +83,28 @@ export async function GET(request: Request) {
     stripeDeep.keyErrorType = stripeErrorType(err);
   }
 
-  return NextResponse.json({ ...shallow, deep: { stripe: stripeDeep } });
+  // SMTP2GO: a read-only stats call validates the API key without sending
+  // anything. The key being present has never meant it works.
+  const emailDeep: Record<string, unknown> = { keyValid: false, error: null };
+  const smtpKey = process.env.SMTP2GO_API_KEY;
+  if (smtpKey) {
+    try {
+      const res = await fetch("https://api.smtp2go.com/v3/stats/email_summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ api_key: smtpKey }),
+      });
+      const body = await res.json().catch(() => ({}));
+      emailDeep.keyValid = res.ok && !body?.data?.error;
+      if (!emailDeep.keyValid) {
+        emailDeep.error = body?.data?.error_code || body?.data?.error || `HTTP ${res.status}`;
+      }
+    } catch (err) {
+      emailDeep.error = err instanceof Error ? err.message : "fetch failed";
+    }
+  } else {
+    emailDeep.error = "not set";
+  }
+
+  return NextResponse.json({ ...shallow, deep: { stripe: stripeDeep, email: emailDeep } });
 }

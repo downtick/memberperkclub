@@ -474,3 +474,31 @@ ul.ticks li .ic { width: 19px; height: 19px; color: var(--violet); margin-top: 2
 @media (prefers-reduced-motion: reduce) {
   .nudge { animation: none; }
 }
+
+/* "Start here" first-step card on the producer dashboard. Violet, never
+   ember — nothing clickable on this site is ember. */
+.startcard {
+  border: 1.5px solid var(--violet-3);
+  background: var(--violet-wash);
+  border-radius: 16px;
+  padding: 22px 24px;
+}
+.startbadge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #fff; background: var(--violet);
+  padding: 5px 11px; border-radius: 999px;
+}
+.tabnudge {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: 8px;
+  font-size: 12px; font-weight: 700; color: #fff; background: var(--violet);
+  padding: 3px 10px; border-radius: 999px; vertical-align: middle;
+}
+.nudge-left { display: inline-block; animation: nudge-left 1.4s ease-in-out infinite; }
+@keyframes nudge-left {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nudge-left { animation: none; }
+}

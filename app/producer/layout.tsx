@@ -16,17 +16,12 @@ export default async function ProducerLayout({ children }: { children: React.Rea
               <Link href="/producer/enroll" className="tab">Enroll a client</Link>
               <Link href="/producer/payment-method" className="tab">
                 Payment method
-                {/* A quiet dot, not a red alert: this is an unfinished setup
-                    step, not an error the producer has made. */}
+                {/* Points back at the tab label it sits beside. Shown only
+                    until a card is on file, then it disappears for good. */}
                 {!hasPaymentMethod && (
-                  <span
-                    aria-label="Setup incomplete"
-                    title="Add a payment method to start enrolling clients"
-                    style={{
-                      display: "inline-block", width: 7, height: 7, borderRadius: "50%",
-                      background: "var(--violet)", marginLeft: 7, verticalAlign: "middle",
-                    }}
-                  />
+                  <span className="tabnudge" aria-label="Start here">
+                    <span className="nudge-left" aria-hidden="true">&larr;</span> Start here
+                  </span>
                 )}
               </Link>
             </div>

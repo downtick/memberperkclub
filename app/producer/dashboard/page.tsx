@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireProducer } from "@/lib/access";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { memberNumberDigits } from "@/lib/membership";
 import type { Profile } from "@/lib/types";
 
@@ -27,9 +28,18 @@ export default async function ProducerDashboard() {
   const supabase = await createClient();
 
   const { data: producer } = await supabase.from("producers").select("*").eq("id", profile.id).maybeSingle();
-  const { data: clients } = await supabase
+  // Service-role read, on purpose. RLS on profiles allows only "own row" and
+  // "admins", so the user-scoped client returned ZERO clients here and the
+  // dashboard said "No memberships given yet" after a successful enrollment.
+  // A producer-reads-their-clients policy was the other option, but RLS cannot
+  // restrict columns and would have handed producers every field of every
+  // client row. This stays safe because the filter is the authenticated
+  // producer's own id from requireProducer() — never request input — and the
+  // select names only what the table below renders.
+  const admin = createAdminClient();
+  const { data: clients } = await admin
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, email, member_number, state, enrolled_at, expires_at, membership_status, comp_until, created_at")
     .eq("producer_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -58,15 +68,33 @@ export default async function ProducerDashboard() {
               {expiringSoon} membership{expiringSoon === 1 ? "" : "s"} expire in 30 days
             </span>
           )}
-          <Link href="/producer/enroll" className="btn btn-primary">Enroll a client</Link>
+          {hasPaymentMethod ? (
+            <Link href="/producer/enroll" className="btn btn-primary">Enroll a client</Link>
+          ) : (
+            <Link href="/producer/payment-method" className="btn btn-primary">Add a payment method</Link>
+          )}
         </div>
       </div>
 
+      {/* A producer with no card cannot enroll anyone, so this is the first
+          step, not a footnote. It used to be a one-line .note with a small
+          inline link, and it went unnoticed in real use. */}
       {!hasPaymentMethod && (
-        <div className="note" style={{ marginBottom: 24 }}>
-          <strong>Add a payment method to start enrolling clients.</strong> You add it once — it&apos;s
-          only charged $12 when you actively enroll someone.{" "}
-          <Link href="/producer/payment-method" style={{ color: "var(--violet)", fontWeight: 600 }}>Add a payment method</Link>
+        <div className="startcard" style={{ marginBottom: 24 }}>
+          <span className="startbadge">
+            Start here <span className="nudge" aria-hidden="true">&rarr;</span>
+          </span>
+          <h2 className="display" style={{ fontSize: 22, margin: "10px 0 6px" }}>
+            Step 1: Add a payment method
+          </h2>
+          <p style={{ fontSize: 15, color: "var(--ink-2)", margin: "0 0 18px", lineHeight: 1.6 }}>
+            You only do this once, and you can&apos;t enroll clients until it&apos;s done. Your card
+            is stored by Stripe, never by us, and it&apos;s charged $12 only when you choose to
+            enroll a client &mdash; never automatically.
+          </p>
+          <Link href="/producer/payment-method" className="btn btn-primary">
+            Add a payment method <span className="nudge" aria-hidden="true">&rarr;</span>
+          </Link>
         </div>
       )}
 

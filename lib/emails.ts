@@ -189,6 +189,12 @@ export async function sendProducerWelcomeEmail(opts: {
     `<p>Hi ${firstName || "there"},</p>
      <p>We've set up a producer account for <strong>${businessName}</strong> on MemberPerkClub. It's free, there's no contract, and there's no monthly fee.</p>
      ${credentialsHtml}
+     <div style="margin:24px 0;padding:20px 22px;border:1.5px solid #A97BFF;background:#F3EDFE;border-radius:14px">
+       <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${VIOLET}">Start here &mdash; step 1</p>
+       <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:${INK}">Add a payment method</p>
+       <p style="margin:0 0 16px;color:#4C405F">You can't enroll clients until this is done, and you only do it once. Your card is stored by Stripe &mdash; we never see the number &mdash; and it's charged $12 only when you choose to enroll a client.</p>
+       <p style="margin:0;text-align:center"><a href="${SITE_URL}/producer/payment-method" style="background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 30px;border-radius:10px;display:inline-block">Add a payment method &rarr;</a></p>
+     </div>
      <h3 style="color:${INK};font-size:16px;margin-top:24px">How it works</h3>
      <ul style="padding-left:20px;color:#4C405F">
        <li>You buy memberships at the wholesale rate of <strong>$12</strong>.</li>
@@ -196,10 +202,7 @@ export async function sendProducerWelcomeEmail(opts: {
        <li>You keep the difference. There is no commission to wait for, because the margin is already yours.</li>
        <li>Each enrollment is a one-time charge. Nothing auto-renews.</li>
      </ul>
-     <h3 style="color:${INK};font-size:16px;margin-top:24px">One step before you can enroll anyone</h3>
-     <p>Add a payment method. We store it with our payment processor &mdash; we never see the number &mdash; and you're only charged the $12 when you choose to enroll a client.</p>
-     <p><a href="${SITE_URL}/producer/payment-method" style="color:${VIOLET};font-weight:700">Add your payment method &rarr;</a></p>
-     <p>Once that's saved you can enroll your first client the same day. Your agency name appears in every client's dashboard all year.</p>
+     <p>Your agency name appears in every client's dashboard all year.</p>
      <p>Questions? Just reply to this email.</p>`
   );
 
@@ -214,14 +217,15 @@ export async function sendProducerWelcomeEmail(opts: {
 We've set up a producer account for ${businessName}.
 ${credentialsText}
 
+START HERE — STEP 1: Add a payment method.
+You can't enroll clients until this is done. You only do it once.
+${SITE_URL}/producer/payment-method
+
 How it works:
 - You buy memberships at the $12 wholesale rate.
 - You set your own retail price, up to the $149 public price.
 - You keep the difference. No commissions — the margin is yours.
-- One-time charge per membership. Nothing auto-renews.
-
-Before you can enroll anyone, add a payment method:
-${SITE_URL}/producer/payment-method`;
+- One-time charge per membership. Nothing auto-renews.`;
 
   return sendEmail({ to, subject: "Your MemberPerkClub producer account is ready", html, text });
 }

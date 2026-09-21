@@ -1,3 +1,5 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+
 // SMTP2GO HTTPS API email sender — shared by all outbound mail. Stubbed
 // behind env vars per websites/CLAUDE.md: real code path, no live key yet.
 const SMTP2GO_API_URL = "https://api.smtp2go.com/v3/email/send";
@@ -30,6 +32,7 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailA
 }> {
   if (!SMTP2GO_API_KEY) {
     console.warn(`[smtp2go] SMTP2GO_API_KEY not set — skipping send to ${to}: "${subject}"`);
+    await recordSend(to, subject, false, "SMTP2GO_API_KEY not configured");
     return { ok: false, error: "SMTP2GO_API_KEY not configured" };
   }
 
@@ -54,9 +57,31 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailA
     });
     const data = await res.json();
     const ok = res.ok && data?.data?.succeeded >= 1;
-    return { ok, error: ok ? undefined : JSON.stringify(data) };
+    const error = ok ? undefined : JSON.stringify(data);
+    await recordSend(to, subject, ok, error);
+    return { ok, error };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    const error = err instanceof Error ? err.message : String(err);
+    await recordSend(to, subject, false, error);
+    return { ok: false, error };
+  }
+}
+
+// Every send lands in email_log, success or failure. Before this existed, a
+// rejected send vanished: sendEmail RETURNS {ok:false} rather than throwing,
+// so the callers' .catch() never fired and nothing was recorded anywhere.
+// Logging must never break sending, hence the swallow at the end.
+async function recordSend(to: string, subject: string, ok: boolean, error?: string) {
+  if (!ok) console.error(`[smtp2go] send FAILED to=${to} subject="${subject}" error=${error}`);
+  try {
+    await createAdminClient().from("email_log").insert({
+      to_email: to,
+      template: subject,
+      status: ok ? "sent" : "failed",
+      error: error ? error.slice(0, 1000) : null,
+    });
+  } catch (logErr) {
+    console.error("[smtp2go] could not write email_log:", logErr);
   }
 }
 
