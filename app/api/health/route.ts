@@ -104,7 +104,11 @@ export async function GET(request: Request) {
             ? "Value is not a well-formed SMTP2GO API key (should start with api-). Likely the SMTP username/password was pasted instead."
             : code === "E_ApiResponseCodes.API_EXCEPTION"
               ? "Well-formed key, but SMTP2GO does not recognise it (revoked or from another account)."
-              : null;
+              : code === "E_ApiResponseCodes.ENDPOINT_PERMISSION_DENIED"
+                ? "Key is RECOGNISED — it just lacks the Stats permission this check uses. Sending may still work; add Stats to the key in SMTP2GO to make this check go green."
+                : null;
+        // A recognised key without Stats permission is not a broken key.
+        emailDeep.keyRecognised = code === "E_ApiResponseCodes.ENDPOINT_PERMISSION_DENIED";
       }
     } catch (err) {
       emailDeep.error = err instanceof Error ? err.message : "fetch failed";
