@@ -48,8 +48,8 @@ export async function sendWelcomeEmail(opts: {
       ? `<p>Click below to set your password and activate your account:</p>
          <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
          <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`
-      : `<p>To get in, set your password using the link below. Your login is <strong>${to}</strong>.</p>
-         <p><a href="${SITE_URL}/forgot-password" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>`;
+      : `<p>To get in, go to the login page and choose <strong>Email me a sign-in link</strong>. Your login is <strong>${to}</strong> &mdash; no password needed.</p>
+         <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Go to the login page &rarr;</a></p>`;
 
   const html = wrap(
     "Welcome to MemberPerkClub",
@@ -67,7 +67,9 @@ export async function sendWelcomeEmail(opts: {
   const text = `Welcome to MemberPerkClub\n\nYour member number is ${memberDigits}.\n${
     tempPassword
       ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.`
-      : `Set your password: ${setPasswordLink || `${SITE_URL}/forgot-password`}`
+      : setPasswordLink
+        ? `Set your password: ${setPasswordLink}`
+        : `Sign in at ${SITE_URL}/login and choose "Email me a sign-in link".`
   }\n\nLog in at ${SITE_URL}/login`;
 
   const result = await sendEmail({ to, subject: "Welcome to MemberPerkClub", html, text });
@@ -261,7 +263,7 @@ export async function sendProducerEnrollmentConfirmation(opts: {
      </table>
      <h3 style="color:${INK};font-size:16px;margin-top:24px">What happens next</h3>
      <p>We have emailed ${clientFirstName || "your client"} a welcome message at <strong>${clientEmail}</strong> with their member number and a link to set their own password. Once they set it, they can sign in and start using their benefits right away.</p>
-     <p style="color:#665B7A;font-size:13px">If they say it never arrived, ask them to check spam first. You can resend it from your producer dashboard.</p>
+     <p style="color:#665B7A;font-size:13px">If they say it never arrived, ask them to check spam first. They can also sign in any time at the login page by choosing &ldquo;Email me a sign-in link&rdquo;.</p>
      <p><a href="${SITE_URL}/producer/dashboard" style="color:${VIOLET};font-weight:700">View your producer dashboard &rarr;</a></p>`
   );
 
