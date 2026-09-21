@@ -3,7 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // SMTP2GO HTTPS API email sender — shared by all outbound mail. Stubbed
 // behind env vars per websites/CLAUDE.md: real code path, no live key yet.
 const SMTP2GO_API_URL = "https://api.smtp2go.com/v3/email/send";
-const SMTP2GO_API_KEY = process.env.SMTP2GO_API_KEY;
+// Trimmed: a trailing newline from copy-paste makes SMTP2GO reject the whole
+// request with INVALID_IN_PAYLOAD before it even looks the key up, which
+// reads like a bad key but is really stray whitespace.
+const SMTP2GO_API_KEY = process.env.SMTP2GO_API_KEY?.trim();
 
 // On-theme sender — NOT hello@. "members@" reads as the club's own voice.
 const SENDER = process.env.EMAIL_FROM || "members@memberperkclub.com";

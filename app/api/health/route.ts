@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   // SMTP2GO: a read-only stats call validates the API key without sending
   // anything. The key being present has never meant it works.
   const emailDeep: Record<string, unknown> = { keyValid: false, error: null };
-  const smtpKey = process.env.SMTP2GO_API_KEY;
+  const smtpKey = process.env.SMTP2GO_API_KEY?.trim();
   if (smtpKey) {
     try {
       const res = await fetch("https://api.smtp2go.com/v3/stats/email_summary", {
@@ -97,7 +97,14 @@ export async function GET(request: Request) {
       const body = await res.json().catch(() => ({}));
       emailDeep.keyValid = res.ok && !body?.data?.error;
       if (!emailDeep.keyValid) {
-        emailDeep.error = body?.data?.error_code || body?.data?.error || `HTTP ${res.status}`;
+        const code = body?.data?.error_code || `HTTP ${res.status}`;
+        emailDeep.error = code;
+        emailDeep.hint =
+          code === "E_ApiResponseCodes.INVALID_IN_PAYLOAD"
+            ? "Value is not a well-formed SMTP2GO API key (should start with api-). Likely the SMTP username/password was pasted instead."
+            : code === "E_ApiResponseCodes.API_EXCEPTION"
+              ? "Well-formed key, but SMTP2GO does not recognise it (revoked or from another account)."
+              : null;
       }
     } catch (err) {
       emailDeep.error = err instanceof Error ? err.message : "fetch failed";
