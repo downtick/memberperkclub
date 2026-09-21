@@ -183,3 +183,47 @@ match `.logo`'s `font-weight: 600`.
 Regenerate with `python3` from the script kept alongside this work; the shapes
 are derived from source, so if the sprite or the gradient changes, regenerate
 rather than hand-editing the PNGs.
+
+## Punchlist added 2026-09-20 (after the first live producer test)
+
+11. **Sendy producer onboarding list + autoresponder.** Create a Sendy list
+    for producers. The producer signup form subscribes each new producer to
+    it (server-side, from `/api/producer/signup`), which triggers a Sendy
+    autoresponder sequence. Source copy for email 1 already exists:
+    `content/emails/producer-onboarding-letter.md` — reuse it. Needs from the
+    user: Sendy install URL, API key, and the new list ID.
+    - **Known limitation, tell the user again when building:** Sendy
+      autoresponders are time-based and cannot see what a producer has
+      done, so a "please add a payment method" email will still go to
+      producers who already added one. The behaviour-based alternative
+      (daily Vercel Cron checking each producer, sending via SMTP2GO) can
+      target "no card after 2 days" / "card but no clients after 7 days".
+      The user chose Sendy; a hybrid is possible later.
+    - **Gotcha:** Sendy `/subscribe` RE-ACTIVATES unsubscribed and bounced
+      addresses when it updates custom fields. Check status before
+      subscribing, never blindly re-subscribe.
+    - Keep Sendy bulk on its own subdomain with its own SPF/DKIM, separate
+      from transactional mail (see item 6).
+12. **Promote an admin.** Nobody is admin yet; /admin is unreachable.
+    User to choose: promote `downtick5@gmail.com` (admins keep producer
+    access), or a dedicated admin login created free via /login ->
+    "Email me a sign-in link".
+13. **SMTP2GO API key: add the Stats permission.** The key is recognised
+    (`ENDPOINT_PERMISSION_DENIED` from `/api/health?deep=1`) but lacks Stats,
+    which is all the health check uses. Sending is proven only by a real
+    send — check `email_log`.
+14. **Rotate the SMTP2GO SMTP password** — it was pasted into a chat
+    transcript on 2026-09-20.
+15. **Supabase key migration.** The project now issues `sb_publishable_` /
+    `sb_secret_` keys; the site uses the legacy `anon` / `service_role` JWTs.
+    Migrate both, THEN disable legacy keys. Disabling first takes the site
+    down instantly.
+16. **Preview deploys share live Stripe keys and the production database.**
+    Proper fix: Stripe test keys + a second Supabase project scoped to the
+    Preview environment. Until then, never test payments on a *.vercel.app URL.
+17. **Behaviour-based producer drip** (see item 11 limitation) if Sendy's
+    time-based sequence proves too blunt.
+18. **Test data cleanup before real members:** delete `downtick5@gmail.com`
+    (producer, MPC-1001) and `lantus30@gmail.com` (member, MPC-1002), refund
+    the $12 in Stripe, then `alter sequence member_number_seq restart with
+    1001;` so the first real member is 1001.
