@@ -1,4 +1,12 @@
 import { sendEmail, adminNotifyAddress } from "./smtp2go";
+import {
+  GUIDE_URLS,
+  PRODUCER_STEPS,
+  WHAT_HAPPENS_NEXT,
+  BENEFIT_HIGHLIGHTS,
+  WHY_PRODUCERS,
+  type GuideStep,
+} from "./producerGuide";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://memberperkclub.com";
 // Literal hex only — email clients do not resolve CSS custom properties.
@@ -24,6 +32,69 @@ function wrap(title: string, bodyHtml: string): string {
   </div>
 </body>
 </html>`;
+}
+
+// ── Shared producer-guide email blocks ────────────────────────────────────
+// Built from lib/producerGuide.ts so the welcome email, the prospect email
+// and the public guide page never disagree. Tables and inline styles only:
+// that is what Apple Mail, Gmail and Outlook all render the same way.
+function esc(v: string): string {
+  return (v || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+type EmailStep = GuideStep & { done?: boolean };
+
+function stepsHtml(steps: EmailStep[]): string {
+  const arrow = `<tr><td align="center" style="padding:4px 0;font-size:24px;line-height:24px;color:${VIOLET}">&#8595;</td></tr>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0">${steps
+    .map((s, i) => {
+      const box = s.required
+        ? `border:2px solid ${VIOLET};background:#F3EDFE;`
+        : `border:1px solid #E6DEF4;background:#ffffff;`;
+      const badge = s.done
+        ? `<td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;border-radius:22px;background:#E6DEF4;color:${VIOLET};font-size:20px;font-weight:700">&#10003;</td>`
+        : `<td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;border-radius:22px;background:${VIOLET};color:#ffffff;font-size:20px;font-weight:700">${s.n}</td>`;
+      const flag = s.required
+        ? `<p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${VIOLET}">&#9733; Required before you can enroll</p>`
+        : "";
+      const body = s.done
+        ? `<p style="margin:0;font-size:14px;color:#665B7A">Done &mdash; you're signed up.</p>`
+        : `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#4C405F">${s.body}</p>
+           <a href="${s.url}" style="display:inline-block;background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:9px">${s.cta} &rarr;</a>`;
+      return `<tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${box}border-radius:14px"><tr>
+        <td width="62" valign="top" style="padding:20px 0 20px 20px"><table role="presentation" cellpadding="0" cellspacing="0"><tr>${badge}</tr></table></td>
+        <td valign="top" style="padding:20px 20px 20px 12px">${flag}
+          <p style="margin:0 0 6px;font-size:17px;font-weight:700;color:${INK}">${s.title}</p>${body}</td>
+      </tr></table></td></tr>${i < steps.length - 1 ? arrow : ""}`;
+    })
+    .join("")}</table>`;
+}
+
+function whatHappensNextHtml(): string {
+  const cells = WHAT_HAPPENS_NEXT.map(
+    (t, i) => `<td align="center" valign="top" width="25%" style="padding:0 4px">
+      <div style="width:32px;height:32px;line-height:32px;border-radius:16px;border:2px solid ${VIOLET};color:${VIOLET};font-weight:700;font-size:14px;margin:0 auto 8px;background:#ffffff">${i + 1}</div>
+      <p style="margin:0;font-size:13px;line-height:1.45;color:#4C405F">${t}</p></td>`
+  ).join("");
+  return `<p style="margin:24px 0 12px;font-size:17px;font-weight:700;color:${INK}">What happens next</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${cells}</tr></table>`;
+}
+
+function benefitsHtml(heading: string): string {
+  const rows = BENEFIT_HIGHLIGHTS.map(
+    (b) => `<tr><td style="padding:0 0 10px"><p style="margin:0;font-size:14px;line-height:1.55;color:#4C405F">
+      <strong style="color:${INK}">${b.title}:</strong> ${b.body}</p></td></tr>`
+  ).join("");
+  return `<p style="margin:26px 0 12px;font-size:17px;font-weight:700;color:${INK}">${heading}</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3EDFE;border-radius:12px">
+      <tr><td style="padding:18px 20px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr></table>`;
+}
+
+function howItWorksHtml(): string {
+  const rows = WHY_PRODUCERS.map(
+    (w) => `<p style="margin:0 0 8px;font-size:14px;line-height:1.55;color:#4C405F">&#10003;&nbsp; <strong style="color:${INK}">${w.lead}</strong> ${w.body}</p>`
+  ).join("");
+  return `<p style="margin:26px 0 12px;font-size:17px;font-weight:700;color:${INK}">Why producers use it</p>${rows}`;
 }
 
 // ── 1. New-member welcome (temp password OR set-password link) ────────────
@@ -172,67 +243,55 @@ export async function sendProducerWelcomeEmail(opts: {
 }) {
   const { to, firstName, businessName, tempPassword, setPasswordLink } = opts;
 
-  // Three cases, and the third one matters: a producer who signed themselves
-  // up has neither a temp password nor a set-password link — they already
-  // received a magic link from the auth provider, so pointing them at a
-  // second credential flow would just confuse them.
-  const credentialsHtml = tempPassword
-    ? `<p>Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.</p>
-       <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Log in to your producer account &rarr;</a></p>`
+  // Step 2 ("activate") depends on how the account was created. Three cases,
+  // and the third matters: a producer who signed themselves up has neither a
+  // temp password nor a set-password link — Supabase already emailed them a
+  // sign-in link, and this email must say so or the two look like spam.
+  const activateHtml = tempPassword
+    ? `Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.`
     : setPasswordLink
-      ? `<p>Click below to set your password and activate your producer account:</p>
-         <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
-         <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`
-      : `<p>Sign in any time with the one-time link we sent you separately, or request a fresh one from the login page.</p>
-         <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Go to the login page &rarr;</a></p>`;
+      ? `Use the button below to set your password and activate your producer account. The link expires in 72 hours.`
+      : `We've emailed you a <strong>separate sign-in link</strong> from club@memberperkclub.com &mdash; click <strong>Sign in</strong> in that email. There's no password to remember: to sign in later, choose <strong>Email me a sign-in link</strong> on the login page.`;
+  const activateUrl = setPasswordLink || GUIDE_URLS.login;
+  const activateCta = setPasswordLink ? "Set your password" : "Go to the login page";
+
+  const steps: EmailStep[] = [
+    { ...PRODUCER_STEPS[0], done: true },
+    { ...PRODUCER_STEPS[1], body: activateHtml, url: activateUrl, cta: activateCta },
+    PRODUCER_STEPS[2],
+    PRODUCER_STEPS[3],
+  ];
 
   const html = wrap(
     "Your producer account is ready",
-    `<p>Hi ${firstName || "there"},</p>
-     <p>We've set up a producer account for <strong>${businessName}</strong> on MemberPerkClub. It's free, there's no contract, and there's no monthly fee.</p>
-     ${credentialsHtml}
-     <div style="margin:24px 0;padding:20px 22px;border:1.5px solid #A97BFF;background:#F3EDFE;border-radius:14px">
-       <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${VIOLET}">Start here &mdash; step 1</p>
-       <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:${INK}">Add a payment method</p>
-       <p style="margin:0 0 16px;color:#4C405F">You can't enroll clients until this is done, and you only do it once. Your card is stored by Stripe &mdash; we never see the number &mdash; and it's charged $12 only when you choose to enroll a client.</p>
-       <p style="margin:0;text-align:center"><a href="${SITE_URL}/producer/payment-method" style="background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 30px;border-radius:10px;display:inline-block">Add a payment method &rarr;</a></p>
-     </div>
-     <h3 style="color:${INK};font-size:16px;margin-top:24px">How it works</h3>
-     <ul style="padding-left:20px;color:#4C405F">
-       <li>You buy memberships at the wholesale rate of <strong>$12</strong>.</li>
-       <li>You are the retail seller &mdash; you decide what your client pays, up to the $149 public price.</li>
-       <li>You keep the difference. There is no commission to wait for, because the margin is already yours.</li>
-       <li>Each enrollment is a one-time charge. Nothing auto-renews.</li>
-     </ul>
-     <p>Your agency name appears in every client's dashboard all year.</p>
+    `<p>Hi ${esc(firstName) || "there"},</p>
+     <p>Welcome aboard. Your free producer account for <strong>${esc(businessName)}</strong> is set up &mdash; no contract, no monthly fee. Here's how to enroll your first client.</p>
+     ${stepsHtml(steps)}
+     ${whatHappensNextHtml()}
+     ${benefitsHtml("What your clients get")}
+     ${howItWorksHtml()}
+     <p style="margin-top:22px">Everything above, plus answers to common questions, is on your
+       <a href="${GUIDE_URLS.gettingStarted}" style="color:${VIOLET};font-weight:700">getting-started guide &rarr;</a></p>
      <p>Questions? Just reply to this email.</p>`
   );
 
-  const credentialsText = tempPassword
-    ? `Login: ${to} / Temp password: ${tempPassword} — please change it after signing in.`
-    : setPasswordLink
-      ? `Set your password: ${setPasswordLink}`
-      : `Sign in with the one-time link we sent you separately, or request a fresh one at ${SITE_URL}/login`;
-
   const text = `Your MemberPerkClub producer account is ready
 
-We've set up a producer account for ${businessName}.
-${credentialsText}
+Welcome aboard. Your free producer account for ${businessName} is set up.
 
-START HERE — STEP 1: Add a payment method.
-You can't enroll clients until this is done. You only do it once.
-${SITE_URL}/producer/payment-method
+1. Create your account — DONE
+2. Activate your account — ${tempPassword ? `Login: ${to} / Temp password: ${tempPassword}` : setPasswordLink ? `Set your password: ${setPasswordLink}` : `Click "Sign in" in the separate sign-in email we sent you.`}
+3. Add a payment method (required before you can enroll): ${GUIDE_URLS.paymentMethod}
+4. Enroll your first client: ${GUIDE_URLS.enroll}
 
-How it works:
-- You buy memberships at the $12 wholesale rate.
-- You set your own retail price, up to the $149 public price.
-- You keep the difference. No commissions — the margin is yours.
-- One-time charge per membership. Nothing auto-renews.`;
+Your client then gets a welcome email with their member number and a link to set their own password.
+
+How it works: you buy memberships at $12 wholesale and set your own price, up to the $149 public price. You keep the difference. One year per membership, one-time charge, never auto-renews.
+
+Getting-started guide and common questions: ${GUIDE_URLS.gettingStarted}`;
 
   return sendEmail({ to, subject: "Your MemberPerkClub producer account is ready", html, text });
 }
-
-
 // ── 5. Producer confirmation: "your client is enrolled" ───────────────────
 // Sent to the PRODUCER, not the member, the moment an enrollment succeeds.
 // Deliberately says nothing about price: the producer sets their own retail
@@ -281,4 +340,39 @@ We have emailed ${clientFirstName || "your client"} at ${clientEmail} with their
 Producer dashboard: ${SITE_URL}/producer/dashboard`;
 
   return sendEmail({ to, subject: `${clientName} is enrolled — MemberPerkClub`, html, text });
+}
+
+// ── 6. Convention prospect welcome — pasted into a SENDY autoresponder ────
+// Not sent by this app. The admin prospect page adds an address to the Sendy
+// "Producer prospects" list; Sendy's autoresponder sends THIS html. It uses
+// Sendy's own tags, which Sendy fills in at send time:
+//   [Name,fallback=there]            the name typed at the booth, if any
+//   <unsubscribe>…</unsubscribe>     Sendy's unsubscribe link (legally required)
+// CAN-SPAM also requires a real postal address in commercial email — the
+// POSTAL_ADDRESS placeholder must be replaced before this goes live.
+export function buildProspectEmailHtml(postalAddress = "[YOUR MAILING ADDRESS — required by law]"): string {
+  const steps = PRODUCER_STEPS.map((s) => ({ ...s }));
+  const body = `<p>Hi [Name,fallback=there],</p>
+     <p>Great meeting you. As promised, here's how MemberPerkClub works &mdash; and why it's an easy extra to offer your clients.</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 6px;background:#F3EDFE;border-radius:12px">
+       <tr><td style="padding:20px 22px">
+         <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:${INK}">A savings membership you resell under your own agency</p>
+         <p style="margin:0;font-size:15px;line-height:1.6;color:#4C405F">You buy memberships at <strong>$12 wholesale</strong> and decide what your client pays &mdash; anything up to the $149 public price, or give it away to win or keep a policy. You keep the difference. Your account is free, with no contract and no monthly fee.</p>
+       </td></tr>
+     </table>
+     ${howItWorksHtml()}
+     ${benefitsHtml("What your clients get")}
+     <p style="margin:26px 0 4px;font-size:17px;font-weight:700;color:${INK}">Getting started takes about five minutes</p>
+     ${stepsHtml(steps)}
+     <p style="text-align:center;margin:8px 0 6px">
+       <a href="${GUIDE_URLS.signup}" style="display:inline-block;background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:17px;padding:16px 34px;border-radius:10px">Open my free producer account &rarr;</a>
+     </p>
+     <p style="margin-top:22px">Want the full walkthrough and answers to common questions first? It's all on our
+       <a href="${GUIDE_URLS.gettingStarted}" style="color:${VIOLET};font-weight:700">getting-started guide</a>.</p>
+     <p>Any questions, just reply to this email.</p>
+     <p>[YOUR NAME]<br><span style="color:#665B7A">MemberPerkClub &middot; club@memberperkclub.com</span></p>
+     <p style="margin-top:28px;font-size:12px;line-height:1.6;color:#8A7F9C">You're receiving this because we met in person and you asked for information about MemberPerkClub.<br>
+       ${esc(postalAddress)}<br>
+       <unsubscribe style="color:#8A7F9C">Unsubscribe</unsubscribe></p>`;
+  return wrap("Great meeting you", body);
 }

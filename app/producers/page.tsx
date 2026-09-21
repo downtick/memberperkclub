@@ -72,7 +72,7 @@ export default function ProducersPage() {
           <Link href="/producer-signup" className="btn btn-primary">
             <Icon name="user" /> Open a free producer account
           </Link>
-          <Link href="#why" className="btn btn-ghost">See how it works</Link>
+          <Link href="/producers/getting-started" className="btn btn-ghost">Step-by-step guide</Link>
         </div>
 
         <MarginCalculator />

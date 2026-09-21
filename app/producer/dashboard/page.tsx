@@ -77,6 +77,13 @@ export default async function ProducerDashboard() {
         </div>
       </div>
 
+      <p style={{ fontSize: 14, margin: "0 0 18px" }}>
+        New here or stuck?{" "}
+        <Link href="/producers/getting-started" style={{ color: "var(--violet)", fontWeight: 600 }}>
+          Read the getting-started guide &rarr;
+        </Link>
+      </p>
+
       {/* A producer with no card cannot enroll anyone, so this is the first
           step, not a footnote. It used to be a one-line .note with a small
           inline link, and it went unnoticed in real use. */}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { sendyConfigured, prospectListId, activeSubscriberCount } from "@/lib/sendy";
 
 // Reports which integrations are configured on THIS deployment. Reports
 // presence only — never a key, a prefix, or a length — so it is safe to hit
@@ -117,5 +118,22 @@ export async function GET(request: Request) {
     emailDeep.error = "not set";
   }
 
-  return NextResponse.json({ ...shallow, deep: { stripe: stripeDeep, email: emailDeep } });
+  // Sendy: the active-subscriber count call needs a valid key AND list id, so
+  // a numeric answer proves both. Anything else is Sendy's error text.
+  const sendyDeep: Record<string, unknown> = { configured: sendyConfigured(), listValid: false, error: null };
+  if (sendyConfigured()) {
+    try {
+      const r = await activeSubscriberCount(prospectListId());
+      if (/^\d+$/.test(r)) {
+        sendyDeep.listValid = true;
+        sendyDeep.prospects = Number(r);
+      } else {
+        sendyDeep.error = r.slice(0, 120);
+      }
+    } catch (err) {
+      sendyDeep.error = err instanceof Error ? err.message : "fetch failed";
+    }
+  }
+
+  return NextResponse.json({ ...shallow, deep: { stripe: stripeDeep, email: emailDeep, sendy: sendyDeep } });
 }
