@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { memberNumberDigits } from "@/lib/membership";
 import type { Profile } from "@/lib/types";
+import ResendWelcomeButton from "@/components/ResendWelcomeButton";
 
 export const metadata: Metadata = { title: "Producer portal" };
 
@@ -108,6 +109,7 @@ export default async function ProducerDashboard() {
               <th>Enrolled</th>
               <th>Expires</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -119,11 +121,12 @@ export default async function ProducerDashboard() {
                 <td>{c.enrolled_at ? new Date(c.enrolled_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}</td>
                 <td>{c.expires_at ? new Date(c.expires_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}</td>
                 <td>{statusPill(c)}</td>
+                <td><ResendWelcomeButton memberId={c.id} /></td>
               </tr>
             ))}
             {list.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--ink-3)" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--ink-3)" }}>
                   No memberships given yet.
                 </td>
               </tr>
