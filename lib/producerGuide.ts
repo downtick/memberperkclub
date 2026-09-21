@@ -6,8 +6,7 @@
 //
 // Deliberately NOT claimed anywhere below:
 //   - any dollar savings figure (standing rule: never invent savings)
-//   - renewing a client after their year ends — the enroll route rejects an
-//     email that already exists, so there is no renewal path yet
+//   (renewal now exists: /api/producer/renew + daily expiry reminders)
 import { SITE } from "@/lib/siteConfig";
 
 const U = SITE.url;
@@ -98,7 +97,8 @@ export const PRODUCER_FAQ: { q: string; a: string }[] = [
   { q: "When is my card charged?", a: "Only at the moment you click to enroll a client: $12 per membership. Never automatically and never on a schedule." },
   { q: "Can I change my payment method?", a: "Yes. Add a new card on the Payment method page and it replaces the old one." },
   { q: "Are memberships refundable?", a: "No. Memberships purchased at the wholesale rate are non-refundable and fully earned at the time of purchase." },
-  { q: "Does a membership renew?", a: "No. Each membership lasts one year from enrollment and never renews automatically, so nothing is charged a year later." },
+  { q: "Does a membership renew?", a: "Not automatically — nothing is ever charged without you choosing to. We email you 30 days and again 7 days before a client's membership ends. To renew, click \u201cRenew\u201d on their row in your dashboard: it's the same $12, and the new year starts when the current one ends, so renewing early never costs your client any days. If you do nothing, their access simply ends on that date." },
+  { q: "Can I charge my client for the renewal?", a: "Yes. You're the retail seller, so you decide what — if anything — your client pays to renew, just like the first year. We only ever charge you the $12 wholesale rate." },
   { q: "Can my client cancel?", a: "There's nothing for them to cancel — they were never charged and nothing recurs. They can change their email and password." },
   { q: "Is this insurance?", a: `No. ${SITE.name} is a savings membership, not an insurance product, so there's no carrier appointment or licensing question.` },
 ];

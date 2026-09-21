@@ -33,7 +33,12 @@ export default function ProducerSignupForm() {
       const res = await fetch("/api/producer/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, company_website: honeypot }),
+        body: JSON.stringify({
+          ...values,
+          company_website: honeypot,
+          referrer: document.referrer || "",
+          pageUrl: window.location.href,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

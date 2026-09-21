@@ -9,6 +9,7 @@ import Icon from "./Icon";
 export default function JoinButton({ email, password }: { email: string; password: string }) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  const [confirmSent, setConfirmSent] = useState(false);
 
   async function handleJoin() {
     setStatus("loading");
@@ -27,10 +28,26 @@ export default function JoinButton({ email, password }: { email: string; passwor
       } = await supabase.auth.getSession();
 
       if (!session) {
-        const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+          email,
+          password,
+          // Without this the confirmation link lands on the site root, which
+          // never exchanges the auth code — the visitor arrives signed out.
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        });
         if (signUpErr && !signUpErr.message.toLowerCase().includes("already registered")) {
           setError(signUpErr.message);
           setStatus("error");
+          return;
+        }
+        // "Confirm email" is ON in Supabase, so a new account gets NO session
+        // until the emailed link is clicked. Calling checkout now can only
+        // fail with "must be signed in" — tell them what to do instead. The
+        // link returns them via /post-login to /membership, which resumes
+        // payment.
+        if (!signUpErr && !signUpData.session) {
+          setConfirmSent(true);
+          setStatus("idle");
           return;
         }
         // If the account already existed, try signing in instead
@@ -56,6 +73,19 @@ export default function JoinButton({ email, password }: { email: string; passwor
       setError("Something went wrong. Please try again.");
       setStatus("error");
     }
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="note" style={{ textAlign: "left" }}>
+        <Icon name="info" />
+        <span>
+          <strong>Check your email to continue.</strong> We sent a confirmation link to{" "}
+          <strong>{email}</strong>. Click it and you&apos;ll come straight back here to finish
+          payment. Not there in a couple of minutes? Check spam.
+        </span>
+      </div>
+    );
   }
 
   return (

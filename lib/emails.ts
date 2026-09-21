@@ -159,47 +159,35 @@ export async function sendProducerSignupAdminNotice(opts: {
   city: string;
   state: string;
   postalCode: string;
+  memberNumber?: string;
+  referrer?: string;
+  pageUrl?: string;
 }) {
-  const {
-    firstName, lastName, businessName, email, phone,
-    addressLine1, addressLine2, city, state, postalCode,
-  } = opts;
-
-  const addressHtml = [addressLine1, addressLine2, `${city}, ${state} ${postalCode}`]
-    .filter(Boolean)
-    .join("<br/>");
-  const addressText = [addressLine1, addressLine2, `${city}, ${state} ${postalCode}`]
-    .filter(Boolean)
-    .join("\n         ");
-
-  const html = wrap(
-    "New Producer Sign-Up",
-    `<p>A new producer just signed up:</p>
-     <table style="width:100%;border-collapse:collapse;font-size:14px">
-       <tr><td style="padding:6px 0;font-weight:700;width:130px;vertical-align:top">Business</td><td>${businessName}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700;vertical-align:top">Contact</td><td>${firstName} ${lastName}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700;vertical-align:top">Email</td><td>${email}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700;vertical-align:top">Phone</td><td>${phone}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700;vertical-align:top">Address</td><td>${addressHtml}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700;vertical-align:top">State</td><td>${state}</td></tr>
-     </table>`
-  );
-  const text = `New producer sign-up
-Business: ${businessName}
-Contact:  ${firstName} ${lastName}
-Email:    ${email}
-Phone:    ${phone}
-Address:  ${addressText}
-State:    ${state}`;
-
-  return sendEmail({
-    to: adminNotifyAddress(),
-    subject: `New producer sign-up: ${businessName} (${firstName} ${lastName})`,
-    html,
-    text,
-  });
+  const o = opts;
+  const sections: Section[] = [
+    { title: "Producer", rows: [
+      ["Business", o.businessName],
+      ["Contact", `${o.firstName} ${o.lastName}`],
+      ["Email", o.email],
+      ["Phone", o.phone],
+      ["Member no.", digits(o.memberNumber)],
+    ]},
+    { title: "Business address", rows: [
+      ["Street", o.addressLine1],
+      ["Line 2", o.addressLine2 || "—"],
+      ["City", o.city],
+      ["State", o.state],
+      ["ZIP", o.postalCode],
+    ]},
+    { title: "Account", rows: [
+      ["Signed up", nowPT()],
+      ["Payment method", "Not added yet"],
+      ["Admin", `${SITE_URL}/admin/producers`],
+    ]},
+    trackingSection(o.referrer, o.pageUrl),
+  ];
+  return sendAdminNotice(`New producer: ${o.businessName}`, "New producer sign-up", sections);
 }
-
 // ── 3. Contact-form notification ────────────────────────────────────────
 export async function sendContactNotice(opts: {
   firstName: string;
@@ -375,4 +363,167 @@ export function buildProspectEmailHtml(postalAddress = "[YOUR MAILING ADDRESS �
        ${esc(postalAddress)}<br>
        <unsubscribe style="color:#8A7F9C">Unsubscribe</unsubscribe></p>`;
   return wrap("Great meeting you", body);
+}
+
+
+// ── Admin notices in the sectioned ("Stratum") format ─────────────────────
+// Built ONCE as {title, rows} sections and rendered to both HTML and text so
+// the two can never drift. Tracking metadata always goes in the LAST section
+// so it can be deleted in one selection before a notice is forwarded.
+type Section = { title: string; rows: [string, string][] };
+
+function digits(memberNumber?: string | null): string {
+  return (memberNumber || "").replace(/^MPC-/i, "") || "—";
+}
+
+function nowPT(d: Date = new Date()): string {
+  return d.toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }) + " PT";
+}
+
+function datePT(iso?: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", {
+    timeZone: "America/Los_Angeles", month: "long", day: "numeric", year: "numeric",
+  });
+}
+
+function trackingSection(referrer?: string, pageUrl?: string): Section {
+  return { title: "Tracking", rows: [
+    ["Referring URL", referrer || "(direct / none)"],
+    ["Signup page", pageUrl || "—"],
+  ]};
+}
+
+function sectionsHtml(sections: Section[]): string {
+  return sections.map((sec) => `
+    <h2 style="margin:22px 0 8px;padding:0 0 6px;border-bottom:2px solid ${VIOLET};font-size:15px;color:${VIOLET};text-transform:uppercase;letter-spacing:.06em">${esc(sec.title)}</h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse">
+      ${sec.rows.map(([k, v]) => `<tr>
+        <td style="padding:6px 12px 6px 0;width:150px;vertical-align:top;font-weight:700;color:${INK}">${esc(k)}</td>
+        <td style="padding:6px 0;vertical-align:top;color:#4C405F;word-break:break-word">${esc(v)}</td></tr>`).join("")}
+    </table>`).join("");
+}
+
+function sectionsText(sections: Section[]): string {
+  return sections.map((sec) =>
+    `== ${sec.title.toUpperCase()} ==\n` + sec.rows.map(([k, v]) => `${k}: ${v}`).join("\n")
+  ).join("\n\n");
+}
+
+async function sendAdminNotice(subject: string, heading: string, sections: Section[]) {
+  return sendEmail({
+    to: adminNotifyAddress(),
+    subject,
+    html: wrap(heading, sectionsHtml(sections)),
+    text: `${heading}\n\n${sectionsText(sections)}`,
+  });
+}
+
+// New member (retail or producer-enrolled) or a renewal — to club@.
+export async function sendMemberAdminNotice(opts: {
+  event: "retail" | "producer_enrolled" | "renewed";
+  member: {
+    firstName?: string | null; lastName?: string | null; email: string;
+    phone?: string | null; state?: string | null; memberNumber?: string | null;
+  };
+  expiresAt?: string | null;
+  producer?: { businessName?: string | null; name?: string | null; email?: string | null } | null;
+  payment?: { amountCents?: number | null; reference?: string | null } | null;
+  previousExpiresAt?: string | null;
+}) {
+  const m = opts.member;
+  const name = [m.firstName, m.lastName].filter(Boolean).join(" ") || "(not provided)";
+  const label = opts.event === "retail" ? "New retail member ($149/yr)"
+    : opts.event === "producer_enrolled" ? "New producer-enrolled member ($12)"
+    : "Membership renewed ($12)";
+
+  const sections: Section[] = [
+    { title: "Member", rows: [
+      ["Member no.", digits(m.memberNumber)],
+      ["Name", name],
+      ["Email", m.email],
+      ["Phone", m.phone || "—"],
+      ["State", m.state || "—"],
+    ]},
+    { title: "Membership", rows: [
+      ["Type", label],
+      ...(opts.event === "renewed" ? [["Previous end date", datePT(opts.previousExpiresAt)] as [string, string]] : []),
+      [opts.event === "retail" ? "Renews" : "Ends", datePT(opts.expiresAt)],
+      ["Recorded", nowPT()],
+    ]},
+  ];
+  if (opts.producer) {
+    sections.push({ title: "Producer", rows: [
+      ["Business", opts.producer.businessName || "—"],
+      ["Contact", opts.producer.name || "—"],
+      ["Email", opts.producer.email || "—"],
+    ]});
+  }
+  if (opts.payment) {
+    sections.push({ title: "Payment", rows: [
+      ["Amount", opts.payment.amountCents != null ? `$${(opts.payment.amountCents / 100).toFixed(2)}` : "—"],
+      ["Stripe reference", opts.payment.reference || "—"],
+    ]});
+  }
+  sections.push({ title: "Admin", rows: [["Members", `${SITE_URL}/admin/members`]] });
+
+  return sendAdminNotice(`${label}: ${name} (${digits(m.memberNumber)})`, label, sections);
+}
+
+// ── Renewal + expiry emails ───────────────────────────────────────────────
+export async function sendProducerRenewalConfirmation(opts: {
+  to: string; producerFirstName: string; clientName: string; memberNumber: string; newExpiresAt: string;
+}) {
+  const o = opts;
+  const html = wrap("Membership renewed",
+    `<p>Hi ${esc(o.producerFirstName) || "there"},</p>
+     <p><strong>${esc(o.clientName)}</strong> (member no. ${digits(o.memberNumber)}) is renewed for another year, through <strong>${datePT(o.newExpiresAt)}</strong>. Your saved payment method was charged the wholesale rate.</p>
+     <p>We've let your client know. Nothing else is needed from you.</p>
+     <p><a href="${GUIDE_URLS.dashboard}" style="color:${VIOLET};font-weight:700">View your producer dashboard &rarr;</a></p>`);
+  const text = `${o.clientName} (member no. ${digits(o.memberNumber)}) is renewed through ${datePT(o.newExpiresAt)}.\n\nDashboard: ${GUIDE_URLS.dashboard}`;
+  return sendEmail({ to: o.to, subject: `${o.clientName} renewed through ${datePT(o.newExpiresAt)}`, html, text });
+}
+
+// To the MEMBER. Never mentions a price: producer-enrolled members never see
+// what their producer paid or charged.
+export async function sendMemberRenewedEmail(opts: {
+  to: string; firstName: string; agency: string | null; newExpiresAt: string;
+}) {
+  const o = opts;
+  const via = o.agency ? ` by <strong>${esc(o.agency)}</strong>` : "";
+  const html = wrap("Your membership is renewed",
+    `<p>Hi ${esc(o.firstName) || "there"},</p>
+     <p>Good news &mdash; your MemberPerkClub membership has been renewed${via}. It's now active through <strong>${datePT(o.newExpiresAt)}</strong>.</p>
+     <p>Nothing changes: sign in the same way as before and your benefits are right where you left them.</p>
+     <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Sign in &rarr;</a></p>`);
+  const text = `Your MemberPerkClub membership has been renewed${o.agency ? ` by ${o.agency}` : ""}. Active through ${datePT(o.newExpiresAt)}.\n\nSign in: ${SITE_URL}/login`;
+  return sendEmail({ to: o.to, subject: `Your membership is renewed through ${datePT(o.newExpiresAt)}`, html, text });
+}
+
+export async function sendProducerExpiryReminder(opts: {
+  to: string;
+  producerFirstName: string;
+  clients: { name: string; memberNumber: string; expiresAt: string; daysLeft: number }[];
+}) {
+  const o = opts;
+  const n = o.clients.length;
+  const soonest = Math.min(...o.clients.map((c) => c.daysLeft));
+  const rows = o.clients.map((c) => `<tr>
+      <td style="padding:8px 10px 8px 0;border-bottom:1px solid #E6DEF4;color:${INK};font-weight:600">${esc(c.name)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E6DEF4;font-family:monospace">${digits(c.memberNumber)}</td>
+      <td style="padding:8px 0;border-bottom:1px solid #E6DEF4">${datePT(c.expiresAt)} <span style="color:#665B7A">(${c.daysLeft} day${c.daysLeft === 1 ? "" : "s"})</span></td></tr>`).join("");
+  const html = wrap(n === 1 ? "A client's membership ends soon" : `${n} client memberships end soon`,
+    `<p>Hi ${esc(o.producerFirstName) || "there"},</p>
+     <p>${n === 1 ? "This client's membership is" : "These clients' memberships are"} coming to an end. Memberships don't renew on their own, so if you'd like to keep ${n === 1 ? "them" : "them"} covered &mdash; and bill your client for the renewal &mdash; renew from your dashboard. It's the same $12 wholesale charge, and the new year starts when the current one ends, so renewing early never costs your client any days.</p>
+     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;margin:14px 0">
+       <tr><th align="left" style="padding:0 10px 6px 0;font-size:12px;color:#665B7A">CLIENT</th><th align="left" style="padding:0 10px 6px;font-size:12px;color:#665B7A">MEMBER NO.</th><th align="left" style="padding:0 0 6px;font-size:12px;color:#665B7A">ENDS</th></tr>
+       ${rows}
+     </table>
+     <p style="text-align:center;margin:22px 0 6px"><a href="${GUIDE_URLS.dashboard}" style="display:inline-block;background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 28px;border-radius:10px">Renew from my dashboard &rarr;</a></p>
+     <p style="color:#665B7A;font-size:13px">If you do nothing, their access simply ends on that date. There is no charge unless you choose to renew.</p>`);
+  const text = `Client memberships ending soon:\n\n${o.clients.map((c) => `- ${c.name} (${digits(c.memberNumber)}) ends ${datePT(c.expiresAt)} — ${c.daysLeft} days`).join("\n")}\n\nRenew from your dashboard ($12 each): ${GUIDE_URLS.dashboard}\nNo charge unless you choose to renew.`;
+  return sendEmail({ to: o.to, subject: n === 1 ? `${o.clients[0].name}'s membership ends in ${soonest} days` : `${n} client memberships ending soon`, html, text });
 }

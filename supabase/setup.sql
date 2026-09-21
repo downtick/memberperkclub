@@ -247,7 +247,13 @@ create or replace view member_access with (security_invoker = true) as
 select
   p.*,
   (
-    p.membership_status in ('active','past_due')
+    (
+      p.membership_status in ('active','past_due')
+      and (
+        p.plan is distinct from 'producer_enrolled'
+        or (p.expires_at is not null and p.expires_at > now())
+      )
+    )
     or (p.comp_until is not null and p.comp_until > now())
   ) as has_access
 from profiles p;

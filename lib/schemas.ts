@@ -31,6 +31,9 @@ export const STATES = [
 
 export const ProducerSignupSchema = z.object({
   company_website: z.string().max(0, "Bot check failed").optional().or(z.literal("")),
+  // Tracking metadata for the admin notice (goes LAST in that email).
+  referrer: z.string().max(500).optional().default(""),
+  pageUrl: z.string().max(500).optional().default(""),
   firstName: z.string().min(1, "First name is required").max(50).trim(),
   lastName: z.string().min(1, "Last name is required").max(50).trim(),
   businessName: z.string().min(1, "Business name is required").max(120).trim(),

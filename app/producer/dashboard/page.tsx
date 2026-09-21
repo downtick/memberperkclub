@@ -6,21 +6,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { memberNumberDigits } from "@/lib/membership";
 import type { Profile } from "@/lib/types";
 import ResendWelcomeButton from "@/components/ResendWelcomeButton";
+import RenewButton from "@/components/RenewButton";
+import { memberHasAccess } from "@/lib/membership";
+import { canRenew, nextExpiry } from "@/lib/producer";
 
 export const metadata: Metadata = { title: "Producer portal" };
 
 function statusPill(m: Profile) {
   const now = new Date();
-  const hasAccess =
-    m.membership_status === "active" ||
-    m.membership_status === "past_due" ||
-    (m.comp_until && new Date(m.comp_until) > now);
-
-  if (!hasAccess) return <span className="pill off">Lapsed</span>;
-
+  // Same rule as the member_access view: a producer-provided year really ends.
+  if (!memberHasAccess(m, now)) {
+    const ended = m.plan === "producer_enrolled" && m.expires_at && new Date(m.expires_at) <= now;
+    return <span className="pill off">{ended ? "Expired" : "Lapsed"}</span>;
+  }
   const expiry = m.expires_at ? new Date(m.expires_at) : null;
   const daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / 86400000) : null;
-  if (daysLeft !== null && daysLeft <= 30) return <span className="pill soon">Expires soon</span>;
+  if (daysLeft !== null && daysLeft <= 30) return <span className="pill soon">Ends in {daysLeft}d</span>;
   return <span className="pill on">Active</span>;
 }
 
@@ -40,7 +41,7 @@ export default async function ProducerDashboard() {
   const admin = createAdminClient();
   const { data: clients } = await admin
     .from("profiles")
-    .select("id, first_name, last_name, email, member_number, state, enrolled_at, expires_at, membership_status, comp_until, created_at")
+    .select("id, first_name, last_name, email, member_number, state, enrolled_at, expires_at, membership_status, comp_until, plan, created_at")
     .eq("producer_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -128,7 +129,18 @@ export default async function ProducerDashboard() {
                 <td>{c.enrolled_at ? new Date(c.enrolled_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}</td>
                 <td>{c.expires_at ? new Date(c.expires_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}</td>
                 <td>{statusPill(c)}</td>
-                <td><ResendWelcomeButton memberId={c.id} /></td>
+                <td>
+                  <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+                    {hasPaymentMethod && canRenew(c.expires_at) && (
+                      <RenewButton
+                        memberId={c.id}
+                        clientName={[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email}
+                        newEndLabel={nextExpiry(c.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      />
+                    )}
+                    <ResendWelcomeButton memberId={c.id} />
+                  </span>
+                </td>
               </tr>
             ))}
             {list.length === 0 && (

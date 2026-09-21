@@ -3,7 +3,7 @@ import { ClientEnrollSchema } from "@/lib/schemas";
 import { getStripe, PRODUCER_ENROLLMENT_FEE_CENTS, logStripeError } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWelcomeEmail, sendProducerEnrollmentConfirmation } from "@/lib/emails";
+import { sendWelcomeEmail, sendProducerEnrollmentConfirmation, sendMemberAdminNotice } from "@/lib/emails";
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -144,6 +144,21 @@ export async function POST(request: NextRequest) {
         clientEmail: memberProfile.email,
         memberNumber: memberProfile.member_number || "",
       }).catch((err) => console.error("Producer confirmation email error:", err));
+
+      await sendMemberAdminNotice({
+        event: "producer_enrolled",
+        member: {
+          firstName: memberProfile.first_name, lastName: memberProfile.last_name, email: memberProfile.email,
+          phone: memberProfile.phone, state: memberProfile.state, memberNumber: memberProfile.member_number,
+        },
+        expiresAt: memberProfile.expires_at,
+        producer: {
+          businessName: producer.business_name,
+          name: [producerProfile.first_name, producerProfile.last_name].filter(Boolean).join(" "),
+          email: producerProfile.email,
+        },
+        payment: { amountCents: PRODUCER_ENROLLMENT_FEE_CENTS, reference: paymentIntent.id },
+      }).catch((err) => console.error("Member admin notice error:", err));
     }
 
     return NextResponse.json({ success: true, memberNumber: memberProfile?.member_number });

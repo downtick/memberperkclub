@@ -45,7 +45,11 @@ export async function requireActiveMember(): Promise<MemberAccess> {
   const access = await getCurrentAccess();
   if (!access) redirect("/login");
   if (access.role === "admin") return access; // admins can preview member pages
-  if (!access.has_access) redirect("/dashboard/billing?renew=1");
+  // Must be a route OUTSIDE /dashboard: this gate runs in the dashboard
+  // layout, so redirecting to /dashboard/billing re-ran the gate and looped
+  // forever (ERR_TOO_MANY_REDIRECTS) for every signed-in member without
+  // access — including brand-new retail signups before payment.
+  if (!access.has_access) redirect("/membership");
   return access;
 }
 

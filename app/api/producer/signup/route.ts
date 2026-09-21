@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
   const {
     firstName, lastName, businessName, email, phone,
     addressLine1, addressLine2, city, state, postalCode,
+    referrer, pageUrl,
   } = parsed.data;
   const admin = createAdminClient();
 
@@ -62,10 +63,12 @@ export async function POST(request: NextRequest) {
 
   // The handle_new_auth_user() trigger already inserted a bare profiles row;
   // fill in the producer's details here.
-  await admin
+  const { data: producerProfile } = await admin
     .from("profiles")
     .update({ role: "producer", first_name: firstName, last_name: lastName, phone, state })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("member_number")
+    .single();
 
   await admin.from("producers").insert({
     id: userId,
@@ -93,6 +96,8 @@ export async function POST(request: NextRequest) {
   await sendProducerSignupAdminNotice({
     firstName, lastName, businessName, email, phone,
     addressLine1, addressLine2: addressLine2 || undefined, city, state, postalCode,
+    memberNumber: producerProfile?.member_number ?? undefined,
+    referrer, pageUrl,
   }).catch((err) => console.error("Producer admin notice error:", err));
 
   return NextResponse.json({ success: true, email });

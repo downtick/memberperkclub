@@ -41,6 +41,10 @@ export async function GET(request: Request) {
     site: {
       url: process.env.NEXT_PUBLIC_SITE_URL || null,
     },
+    // Without it the daily expiry-reminder job refuses to run (fail closed).
+    cron: {
+      secret: has(process.env.CRON_SECRET),
+    },
   };
 
   // ?deep=1 actually CALLS Stripe instead of checking for a non-empty string.

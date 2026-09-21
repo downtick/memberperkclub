@@ -23,10 +23,8 @@ export function getMembershipDisplay(profile: Profile): MembershipDisplay {
       ? new Date(profile.comp_until)
       : null;
 
-  const hasAccess =
-    profile.membership_status === "active" ||
-    profile.membership_status === "past_due" ||
-    (profile.comp_until && new Date(profile.comp_until) > now);
+  // Mirrors has_access in the member_access view — keep the two in step.
+  const hasAccess = memberHasAccess(profile, now);
 
   if (!hasAccess) {
     return {
@@ -69,4 +67,21 @@ export function memberNumberDigits(memberNumber: string | null | undefined): str
 
 export function memberNumberLabel(memberNumber: string | null | undefined): string {
   return `Member no. ${memberNumberDigits(memberNumber)}`;
+}
+
+// Single source for "does this profile have access right now", matching the
+// member_access view's has_access in SQL. A producer-enrolled membership is a
+// fixed one-year term: status stays "active" in the row, so expires_at is what
+// actually ends it. Before 2026-09-21 nothing checked expires_at and a $12
+// membership never expired.
+export function memberHasAccess(
+  profile: Pick<Profile, "membership_status" | "plan" | "expires_at" | "comp_until">,
+  now: Date = new Date()
+): boolean {
+  const statusOk = profile.membership_status === "active" || profile.membership_status === "past_due";
+  const termOk =
+    profile.plan !== "producer_enrolled" ||
+    (profile.expires_at !== null && profile.expires_at !== undefined && new Date(profile.expires_at) > now);
+  const comped = Boolean(profile.comp_until && new Date(profile.comp_until) > now);
+  return (statusOk && termOk) || comped;
 }

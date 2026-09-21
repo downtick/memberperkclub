@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendWelcomeEmail } from "@/lib/emails";
+import { sendWelcomeEmail, sendMemberAdminNotice } from "@/lib/emails";
 
 // Stripe webhook — retail ($149/yr subscription) lifecycle only. Producer
 // enrollments are one-time PaymentIntents handled synchronously in
@@ -72,6 +72,16 @@ export async function POST(request: NextRequest) {
           firstName: profile.first_name || "",
           memberNumber: profile.member_number || "",
         }).catch((err) => console.error("Welcome email error:", err));
+
+        await sendMemberAdminNotice({
+          event: "retail",
+          member: {
+            firstName: profile.first_name, lastName: profile.last_name, email: profile.email,
+            phone: profile.phone, state: profile.state, memberNumber: profile.member_number,
+          },
+          expiresAt: profile.current_period_end,
+          payment: { amountCents: session.amount_total, reference: subscription?.id ?? session.id },
+        }).catch((err) => console.error("Member admin notice error:", err));
       }
       break;
     }
