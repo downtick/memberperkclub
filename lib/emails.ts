@@ -1,4 +1,5 @@
 import { sendEmail, adminNotifyAddress } from "./smtp2go";
+import { SITE } from "./siteConfig";
 import {
   GUIDE_URLS,
   PRODUCER_STEPS,
@@ -9,6 +10,7 @@ import {
 } from "./producerGuide";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://memberperkclub.com";
+const SITE_MAILING_ADDRESS = SITE.mailingAddress;
 // Literal hex only — email clients do not resolve CSS custom properties.
 const VIOLET = "#6733CC";
 const INK = "#1F1730";
@@ -338,7 +340,7 @@ Producer dashboard: ${SITE_URL}/producer/dashboard`;
 //   <unsubscribe>…</unsubscribe>     Sendy's unsubscribe link (legally required)
 // CAN-SPAM also requires a real postal address in commercial email — the
 // POSTAL_ADDRESS placeholder must be replaced before this goes live.
-export function buildProspectEmailHtml(postalAddress = "[YOUR MAILING ADDRESS — required by law]"): string {
+export function buildProspectEmailHtml(postalAddress = SITE_MAILING_ADDRESS): string {
   const steps = PRODUCER_STEPS.map((s) => ({ ...s }));
   const body = `<p>Hi [Name,fallback=there],</p>
      <p>Great meeting you. As promised, here's how MemberPerkClub works &mdash; and why it's an easy extra to offer your clients.</p>

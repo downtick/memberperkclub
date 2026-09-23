@@ -34,7 +34,7 @@ const STEPS: { no: string; icon: IconName; title: string; body: string }[] = [
 const WHY: { lead: string; body: string }[] = [
   {
     lead: "You set the retail price.",
-    body: "Give it away to win a policy, bundle it into a service fee, or sell it outright at anything up to the $149 public price. We never tell you what to charge.",
+    body: "Sell it at anything up to the $149 public price — you decide, and we never tell you what to charge. Providing it at no charge alongside an insurance sale is a separate question: check your state's rebating and inducement rules first.",
   },
   {
     lead: "It isn't insurance.",

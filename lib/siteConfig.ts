@@ -16,6 +16,9 @@ export const SITE = {
   /** Registered entity named in the legal pages. */
   legalEntity: process.env.NEXT_PUBLIC_SITE_LEGAL_ENTITY || "MemberPerkClub, LLC",
   /** Single letter/short mark fallback; the brand mark itself is the i-spark icon. */
+  /** Postal address. Commercial email must carry one (CAN-SPAM). */
+  mailingAddress:
+    process.env.NEXT_PUBLIC_MAILING_ADDRESS || "9169 W State St #1888, Garden City, ID 83714",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@memberperkclub.com",
   privacyEmail: process.env.NEXT_PUBLIC_PRIVACY_EMAIL || "privacy@memberperkclub.com",
 } as const;

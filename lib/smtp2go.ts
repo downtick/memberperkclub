@@ -19,7 +19,11 @@ const ADMIN_NOTIFY_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "admin@memberperkcl
 // BCC rather than CC or a second To: recipients must never see this address.
 // Intentionally env-only with NO fallback — the real address is an internal
 // mailbox and must not appear in the repo. Unset means no BCC, not a default.
-const EMAIL_BCC = process.env.EMAIL_BCC;
+// Comma-separated: EMAIL_BCC="david@yesbaker.com,club@memberperkclub.com".
+const EMAIL_BCC = (process.env.EMAIL_BCC || "")
+  .split(",")
+  .map((a) => a.trim())
+  .filter(Boolean);
 
 export interface SendEmailArgs {
   to: string;
@@ -46,11 +50,12 @@ export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailA
       body: JSON.stringify({
         api_key: SMTP2GO_API_KEY,
         to: [to],
-        // Skip the BCC when it is already the To: — admin notices would
-        // otherwise arrive twice in the same mailbox.
-        ...(EMAIL_BCC && EMAIL_BCC.toLowerCase() !== to.toLowerCase()
-          ? { bcc: [EMAIL_BCC] }
-          : {}),
+        // Drop any BCC that is already the To: — otherwise an admin notice
+        // addressed to club@ would arrive twice in that same mailbox.
+        ...(() => {
+          const bcc = EMAIL_BCC.filter((a) => a.toLowerCase() !== to.toLowerCase());
+          return bcc.length ? { bcc } : {};
+        })(),
         sender: SENDER,
         subject,
         html_body: html,

@@ -16,9 +16,12 @@ function marginNote(margin: number): string {
     return "Per membership, after the $12 wholesale cost. We pay no commissions — there's nothing to pay, because the margin is already yours.";
   }
   if (margin === 0) {
-    return "You pass it through at cost. Nothing earned, nothing lost — a clean value-add for the client.";
+    return "You pass it through at cost — nothing earned, nothing lost.";
   }
-  return `You absorb $${Math.abs(margin)} per membership and give it as a gift. Many producers do exactly this to win or keep a policy.`;
+  // No "give it away to win a policy" and no claims about what other
+  // producers do: most states regulate inducements tied to an insurance
+  // sale, and we have no producer behaviour to cite.
+  return `You absorb $${Math.abs(margin)} per membership. Check your state's rebating and inducement rules before providing it at no charge alongside an insurance sale.`;
 }
 
 export default function MarginCalculator() {
