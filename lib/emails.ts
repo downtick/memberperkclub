@@ -363,7 +363,7 @@ export function buildProspectEmailHtml(postalAddress = SITE_MAILING_ADDRESS): st
      <p>[YOUR NAME]<br><span style="color:#665B7A">MemberPerkClub &middot; club@memberperkclub.com</span></p>
      <p style="margin-top:28px;font-size:12px;line-height:1.6;color:#8A7F9C">You're receiving this because we met in person and you asked for information about MemberPerkClub.<br>
        ${esc(postalAddress)}<br>
-       <unsubscribe style="color:#8A7F9C">Unsubscribe</unsubscribe></p>`;
+       <span style="color:#8A7F9C"><unsubscribe>Unsubscribe</unsubscribe></span></p>`;
   return wrap("Great meeting you", body);
 }
 
