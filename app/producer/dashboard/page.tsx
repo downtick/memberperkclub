@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { memberNumberDigits } from "@/lib/membership";
 import type { Profile } from "@/lib/types";
+import ClientEmailEditor from "@/components/ClientEmailEditor";
 import ResendWelcomeButton from "@/components/ResendWelcomeButton";
 import RenewButton from "@/components/RenewButton";
 import { memberHasAccess } from "@/lib/membership";
@@ -123,7 +124,14 @@ export default async function ProducerDashboard() {
           <tbody>
             {list.map((c) => (
               <tr key={c.id}>
-                <td>{[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email}</td>
+                <td>
+                  <span style={{ display: "block" }}>
+                    {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email}
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: "var(--ink-3)", wordBreak: "break-all" }}>
+                    {c.email}
+                  </span>
+                </td>
                 <td className="mono">{memberNumberDigits(c.member_number)}</td>
                 <td>{c.state || "—"}</td>
                 <td>{c.enrolled_at ? new Date(c.enrolled_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}</td>
@@ -138,6 +146,7 @@ export default async function ProducerDashboard() {
                         newEndLabel={nextExpiry(c.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       />
                     )}
+                    <ClientEmailEditor memberId={c.id} email={c.email} />
                     <ResendWelcomeButton memberId={c.id} />
                   </span>
                 </td>
