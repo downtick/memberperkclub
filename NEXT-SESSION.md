@@ -275,3 +275,34 @@ Built: `/admin/prospects` (phone-first capture), `/api/admin/prospects`,
   policy sale, which many states restrict. The calculator line also
   asserts producer behaviour nobody can back yet. Removed from all new
   copy; these two pre-existing lines await the user's decision.
+
+## Punchlist 2026-10-07
+
+21. **Palm Springs convention list** — the user will supply the attendee list
+    from the Palm Springs (Agents Alliance) convention held 2026-09-25/26.
+    Subscribe via the Sendy API (not the CSV importer) so the "Producer
+    prospect onboarding" autoresponder fires; check each address's status
+    first, because /subscribe re-activates unsubscribed and bounced people.
+22. **$19/year small business offer — code built, Stripe object missing.**
+    `/small-business-offer` + `lib/offers.ts` allowlist + checkout support are
+    live in the repo. Needs a recurring $19/yr Price created in Stripe and its
+    id in Vercel as `STRIPE_PRICE_BUSINESS`. Until then the page's button
+    returns "This offer isn't available yet". Verify with
+    `/api/health?deep=1` -> `deep.stripe.businessPriceValid`.
+    Business members are stored as plan `retail_annual` on purpose (same
+    product, different price); the offer slug is recorded in Stripe metadata
+    and member_events. Add a distinct plan value only if reporting needs it.
+23. **Arizona list (33 rows, exported 2026-10-07)** — already in Sendy, added
+    via API 2026-10-06. 3 bounced: sonoraninsurancel@gmail.com,
+    rochaeldouglas18@gmail.com (typo of rachaeldouglas18@gmail.com, which is
+    Active), isell@shepherdins.com. Also chris@southlandinsurancesves.com is
+    probably a typo of ...svcs.com. Do not re-subscribe bounced addresses.
+24. **Affiliate links crediting ServiceLocatorPro (the five):**
+    CallRail `partners.callrail.com/servicelocatorpro`,
+    SimpleTexting `simpletexting.grsm.io/servicelocatorpro`,
+    QuickBooks `quickbooks.grsm.io/servicelocator`,
+    Freshsales `affiliatepartner-freshsales.freshworks.com/servicelocator`,
+    High Level Science `livehighlevel.com/servicelocatorpro`.
+    Replacements must be generated inside each merchant's affiliate dashboard
+    under a MemberPerkClub account. They cannot be scraped from
+    servicelocatorpro.com — that site carries these same links.

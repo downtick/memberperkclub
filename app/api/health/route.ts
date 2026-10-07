@@ -72,6 +72,22 @@ export async function GET(request: Request) {
     await stripe.balance.retrieve();
     stripeDeep.keyValid = true;
 
+    const businessId = process.env.STRIPE_PRICE_BUSINESS?.trim();
+    if (businessId) {
+      try {
+        const bp = await stripe.prices.retrieve(businessId);
+        stripeDeep.businessPriceValid = true;
+        stripeDeep.businessPriceAmount = bp.unit_amount;
+        stripeDeep.businessPriceIsRecurring = bp.type === "recurring";
+        stripeDeep.businessPriceIsLive = bp.livemode;
+      } catch (err) {
+        stripeDeep.businessPriceValid = false;
+        stripeDeep.businessPriceError = stripeErrorType(err);
+      }
+    } else {
+      stripeDeep.businessPriceValid = null;
+    }
+
     const priceId = process.env.STRIPE_PRICE_ANNUAL;
     if (priceId) {
       try {

@@ -23,7 +23,9 @@ export default async function BillingPage() {
 
       <div className="card p-6 mb-6">
         <p className="text-sm text-[var(--ink-3)] mb-1">Plan</p>
-        <p className="font-semibold mb-4">Retail Membership — $149/year, auto-renewing</p>
+        {/* No price here: members on the small business rate pay a different
+            amount, and the exact figure always lives on their Stripe receipt. */}
+        <p className="font-semibold mb-4">Annual membership, renewing automatically</p>
         <p className="text-sm text-[var(--ink-3)] mb-1">Next renewal</p>
         <p className="font-semibold mb-4">
           {profile.current_period_end

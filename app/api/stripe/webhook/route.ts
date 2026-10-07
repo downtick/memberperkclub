@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       await admin.from("member_events").insert({
         member_id: profileId,
         event: "joined",
-        detail: { stripe_event: event.id, plan: "retail_annual" },
+        detail: { stripe_event: event.id, plan: "retail_annual", offer: session.metadata?.offer || null },
       });
 
       if (profile) {

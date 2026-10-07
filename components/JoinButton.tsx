@@ -6,7 +6,7 @@ import Icon from "./Icon";
 // Starts Stripe Checkout for the $149/yr retail plan. If the visitor isn't
 // signed in yet, creates a bare Supabase auth account first (email +
 // password from this same form) so Checkout has a profile_id to attach to.
-export default function JoinButton({ email, password }: { email: string; password: string }) {
+export default function JoinButton({ email, password, offer }: { email: string; password: string; offer?: string }) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
   const [confirmSent, setConfirmSent] = useState(false);
@@ -61,7 +61,11 @@ export default function JoinButton({ email, password }: { email: string; passwor
         }
       }
 
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(offer ? { offer } : {}),
+      });
       const data = await res.json();
       if (!res.ok || !data.url) {
         setError(data.error || "Unable to start checkout.");
