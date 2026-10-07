@@ -214,7 +214,7 @@ export const ARTICLES: ArticleContent[] = [
   {
     slug: "maintain-your-lawn-through-the-seasons",
     title: "How to Maintain Your Lawn Through the Seasons",
-    summary: "What your lawn needs in spring, summer, fall, and winter — and what to skip.",
+    summary: "What your lawn needs in spring, summer, fall, and winter, and what to skip.",
     category: "Home",
     printable: false,
     body: (
