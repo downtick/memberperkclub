@@ -537,3 +537,33 @@ ul.ticks li .ic { width: 19px; height: 19px; color: var(--violet); margin-top: 2
   .gs-benefits { grid-template-columns: 1fr; }
   .gs-step { grid-template-columns: 1fr; }
 }
+
+/* ── Article colour helpers (content/articles) ───────────────────────────
+   Violet only: the brand's single accent. Ember stays reserved for the hero
+   stat number, and nothing here is clickable. */
+.a-checks { list-style: none; padding: 0; margin: 14px 0; }
+.a-checks li {
+  display: grid; grid-template-columns: 22px 1fr; gap: 10px;
+  align-items: start; margin: 0 0 10px; line-height: 1.6;
+}
+.a-checks li::before {
+  content: "\2713"; color: var(--violet); font-weight: 700; font-size: 15px; line-height: 1.6;
+}
+.a-callout {
+  background: var(--violet-wash); border-left: 4px solid var(--violet);
+  border-radius: 0 12px 12px 0; padding: 16px 18px; margin: 20px 0;
+}
+.a-callout p:last-child { margin-bottom: 0; }
+.a-callout .a-callout-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--violet); margin: 0 0 6px;
+}
+.a-season {
+  display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #fff; background: var(--violet);
+  padding: 4px 11px; border-radius: 999px; margin-bottom: 4px;
+}
+@media print {
+  .a-callout { background: #fff; border-left: 3px solid #000; }
+  .a-season { background: #fff; color: #000; border: 1px solid #000; }
+}

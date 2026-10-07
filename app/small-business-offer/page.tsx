@@ -91,7 +91,7 @@ export default function SmallBusinessOfferPage() {
                 value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
 
-            <JoinButton email={email} password={password} offer={offer.slug} />
+            <JoinButton email={email} password={password} offer={offer.slug} priceLabel="$19/year" />
 
             <p className="fineprint">
               You will get a confirmation email first. Click the link in it and you come straight

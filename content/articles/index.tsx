@@ -9,6 +9,30 @@ export interface ArticleContent {
   body: ReactNode;
 }
 
+// Small presentational helpers shared by the articles below. Check marks and
+// the violet callout come from CSS (.a-checks, .a-callout) so they also print
+// cleanly in black and white.
+function Checks({ items }: { items: string[] }) {
+  return (
+    <ul className="a-checks">
+      {items.map((t) => (<li key={t}>{t}</li>))}
+    </ul>
+  );
+}
+
+function Callout({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="a-callout">
+      <p className="a-callout-title">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function Season({ label }: { label: string }) {
+  return <p><span className="a-season">{label}</span></p>;
+}
+
 // v1 article library. Written at a 12th-grade-or-lower reading level,
 // bullet-point-heavy. Printable articles use the `.print-sheet` styling +
 // the PrintButton component rather than generating a literal PDF (see
@@ -195,47 +219,152 @@ export const ARTICLES: ArticleContent[] = [
     printable: false,
     body: (
       <>
-        <p>A full guide to seasonal lawn care is coming soon.</p>
-        <ul>
-          <li><strong>Spring:</strong> aerate, overseed bare patches, apply pre-emergent weed control.</li>
-          <li><strong>Summer:</strong> water deeply and less often, mow high to shade roots, watch for pests.</li>
-          <li><strong>Fall:</strong> fertilize for root growth, keep mowing until growth stops, clear leaves.</li>
-          <li><strong>Winter:</strong> stay off frozen or frosty grass, keep an eye on drainage and ice buildup.</li>
-        </ul>
+        <p>
+          Most lawn problems come from doing the right job at the wrong time of year. Here is what
+          to do and when.
+        </p>
+
+        <Season label="Spring" />
+        <Checks items={[
+          "Rake out the dead grass and leaves left over from winter. Air and water need to reach the soil.",
+          "Wait until the grass is actively growing before the first cut. Cutting a sleepy lawn weakens it.",
+          "Put down crabgrass preventer when the soil hits about 55 degrees. A cheap soil thermometer tells you.",
+          "Fix bare patches now. Loosen the soil, drop seed, keep it damp for two weeks.",
+        ]} />
+
+        <Season label="Summer" />
+        <Checks items={[
+          "Set the mower higher. Taller grass shades the soil, holds water, and crowds out weeds.",
+          "Water deeply twice a week, not a little every day. You want the roots to chase the water down.",
+          "Water early in the morning. Evening water sits on the blades all night and invites disease.",
+          "Leave the clippings on the lawn. They break down and feed it for free.",
+        ]} />
+
+        <Season label="Fall" />
+        <Checks items={[
+          "This is the best time to seed. The soil is still warm and the weeds have slowed down.",
+          "Aerate if the ground feels hard or water puddles. Rent a core aerator for a few hours.",
+          "Keep mowing until the grass stops growing. Long grass under snow gets matted and moldy.",
+          "Feed the lawn once in the fall. Roots keep growing after the top stops.",
+        ]} />
+
+        <Season label="Winter" />
+        <Checks items={[
+          "Stay off a frozen lawn. Footprints on frozen blades leave dead tracks in spring.",
+          "Keep heavy items off the grass. A tarp or a trailer left in one spot kills what is under it.",
+          "Clean and drain the mower before storing it.",
+        ]} />
+
+        <Callout title="The three mistakes that cause most problems">
+          <p>Cutting too short. Never take off more than a third of the blade at once.</p>
+          <p>Watering every day for a few minutes. That grows shallow roots.</p>
+          <p>Feeding at the wrong time. Heavy feeding in high summer stresses the lawn.</p>
+        </Callout>
       </>
     ),
   },
   {
     slug: "air-quality-voc-filter-worth-it",
-    title: "Is an Air Quality / VOC Filter Worth It?",
+    title: "Is an Air Quality Filter Worth It?",
     summary: "What VOC filters actually do, who benefits most, and how to decide if one is worth the cost.",
     category: "Home",
     printable: false,
     body: (
       <>
-        <p>A full guide to indoor air quality and VOC filtration is coming soon.</p>
-        <ul>
-          <li>VOC (volatile organic compound) filters use activated carbon to reduce odors and certain chemical fumes that standard filters don't catch.</li>
-          <li>They tend to help most with new furniture/flooring off-gassing, smoke, or strong household chemical use.</li>
-          <li>They generally do not replace a HEPA-style filter for dust, pollen, and allergens — many households want both.</li>
-        </ul>
+        <p>
+          A standard furnace filter protects your equipment. A higher grade filter cleans the air
+          you breathe. They are not the same job, and the better one is not always the right pick
+          for your home.
+        </p>
+
+        <h2>What the number on the package means</h2>
+        <Checks items={[
+          "MERV 1 to 4: catches lint and large dust. Protects the furnace, not you.",
+          "MERV 5 to 8: catches mold spores and most dust. A reasonable middle.",
+          "MERV 11 to 13: catches pollen, pet dander, smoke, and fine dust.",
+          "HEPA: catches almost everything, but most home systems cannot pull air through one.",
+        ]} />
+
+        <h2>It is worth it if</h2>
+        <Checks items={[
+          "Someone in the house has allergies or asthma.",
+          "You have pets that shed.",
+          "You live near a busy road, a farm field, or anywhere with wildfire smoke.",
+          "Anyone in the house smokes.",
+        ]} />
+
+        <h2>Think twice if</h2>
+        <Checks items={[
+          "Your system is older or already struggles to heat and cool the house.",
+          "You tend to forget filter changes. A clogged high grade filter is worse than a clean cheap one.",
+          "Your ducts leak. Filtered air that escapes into the attic helps nobody.",
+        ]} />
+
+        <Callout title="What about VOCs">
+          <p>
+            VOCs are fumes from paint, cleaners, new carpet, and glue. A normal filter does not
+            catch them because they are gas, not dust. To cut VOCs you need a carbon filter, and
+            you need fresh air. Open a window when you paint or clean.
+          </p>
+        </Callout>
+
+        <h2>Before you spend the money</h2>
+        <Checks items={[
+          "Check what size your system takes. The size is printed on the side of your current filter.",
+          "Look up the highest MERV your system allows. The manual says, or the maker's website does.",
+          "Try one season at the higher grade and watch your airflow. Weak airflow from the vents means go back down.",
+        ]} />
       </>
     ),
   },
   {
     slug: "low-maintenance-indoor-gardening",
-    title: "Low-Maintenance Indoor Gardening (No Yard Required)",
+    title: "Low Maintenance Indoor Gardening",
     summary: "Easy houseplants and a simple care routine for apartments, condos, and busy schedules.",
     category: "Home",
     printable: false,
     body: (
       <>
-        <p>A full guide to low-maintenance indoor gardening is coming soon.</p>
-        <ul>
-          <li>Easiest starter plants: pothos, snake plant, ZZ plant, spider plant.</li>
-          <li>Most low-light apartments can still support one or two of the plants above.</li>
-          <li>A simple weekly check (soil dryness + a rotation toward the light) is usually all these need.</li>
-        </ul>
+        <p>You do not need a yard, a greenhouse, or much time. You need the right plants and a sink.</p>
+
+        <h2>Plants that forgive you</h2>
+        <Checks items={[
+          "Snake plant. Low light, water about once a month.",
+          "Pothos. Grows in almost any light and tells you when it is thirsty by drooping.",
+          "ZZ plant. Handles a dark corner and skipped watering.",
+          "Spider plant. Grows fast and makes baby plants you can pot up and give away.",
+          "Cast iron plant. The name is the review.",
+        ]} />
+
+        <h2>Herbs worth growing in a kitchen window</h2>
+        <Checks items={[
+          "Mint. Nearly impossible to kill. Keep it in its own pot because it takes over.",
+          "Basil. Wants the sunniest window you have and regular water.",
+          "Chives. Cut what you need and they grow back.",
+          "Green onions. Stand the white root ends in a glass of water and watch them regrow.",
+        ]} />
+
+        <Callout title="The four things that kill houseplants">
+          <p>Too much water. More plants die from kindness than from neglect.</p>
+          <p>Pots with no drainage hole. Roots sitting in water rot.</p>
+          <p>The wrong light. South facing windows are bright. North facing are dim.</p>
+          <p>Cold drafts. Keep plants off windowsills that frost and away from heat vents.</p>
+        </Callout>
+
+        <h2>A simple routine</h2>
+        <Checks items={[
+          "Once a week: poke a finger two inches into the soil. Water only if it is dry.",
+          "Once a month: turn each pot a half turn so growth stays even.",
+          "Twice a year: feed with a basic houseplant food in spring and summer.",
+          "Once a year: move up one pot size if roots show at the drainage hole.",
+        ]} />
+
+        <h2>Starting cheap</h2>
+        <Checks items={[
+          "Ask a friend with a pothos or spider plant for a cutting. Both root in a glass of water.",
+          "Buy small plants instead of large ones. They adjust to your home better.",
+          "Save yogurt tubs as pots. Poke holes in the bottom.",
+        ]} />
       </>
     ),
   },
@@ -247,13 +376,49 @@ export const ARTICLES: ArticleContent[] = [
     printable: false,
     body: (
       <>
-        <p>A full down-payment savings guide is coming soon.</p>
-        <ul>
-          <li>Start with your target down payment (often 3%–20% of the home price).</li>
-          <li>Open a separate, dedicated savings account so the money is "out of sight."</li>
-          <li>Automate a transfer on payday, even a small one — consistency beats intensity.</li>
-          <li>Redirect windfalls (tax refunds, bonuses) straight into the fund.</li>
-        </ul>
+        <p>
+          Saving for a house is a different job than a normal budget. You are saving a large amount
+          for one date, so the plan has to be specific.
+        </p>
+
+        <h2>Work out your real target</h2>
+        <p>You need more than the down payment.</p>
+        <Checks items={[
+          "Down payment. Anywhere from 3 percent to 20 percent of the price depending on the loan.",
+          "Closing costs. Usually 2 percent to 5 percent of the price.",
+          "Moving and setup. Deposits, truck, basic furniture, tools.",
+          "A cushion so you do not start homeownership with nothing in the bank.",
+        ]} />
+
+        <h2>Then do the math backward</h2>
+        <Checks items={[
+          "Add those four numbers. That is your target.",
+          "Pick your date. Count the months between now and then.",
+          "Divide the target by the months. That is your monthly savings number.",
+          "If that number is impossible, move the date instead of lying to yourself.",
+        ]} />
+
+        <h2>Make the saving automatic</h2>
+        <Checks items={[
+          "Open a separate savings account only for the house. Mixing it with spending money never works.",
+          "Set an automatic transfer for the day after payday.",
+          "Put the account at a different bank so it is slightly annoying to reach.",
+          "Send any windfall straight there. Tax refunds, bonuses, gift money.",
+        ]} />
+
+        <h2>Where to find the money</h2>
+        <Checks items={[
+          "Review every subscription. Cancel anything you did not use last month.",
+          "Call your insurance and phone company and ask for a lower rate.",
+          "Pause retirement contributions above the employer match only if the timeline is short.",
+          "Give yourself a small fun budget. A plan with zero joy gets abandoned.",
+        ]} />
+
+        <Callout title="Things that catch people out">
+          <p>Credit matters as much as savings. Pay everything on time while you save.</p>
+          <p>Do not open new credit cards or finance a car in the year before you apply.</p>
+          <p>Keep the money somewhere boring. Money you need within two years should not be in the stock market.</p>
+        </Callout>
       </>
     ),
   },
@@ -265,12 +430,60 @@ export const ARTICLES: ArticleContent[] = [
     printable: false,
     body: (
       <>
-        <p>A full family budgeting guide is coming soon.</p>
-        <ul>
-          <li>List every income source and every fixed bill first — what's left is what you actually get to plan with.</li>
-          <li>Use a simple split like 50% needs / 30% wants / 20% savings &amp; debt as a starting point, then adjust.</li>
-          <li>Review the budget together as a household once a month — five minutes, same day every month.</li>
-        </ul>
+        <p>
+          A family budget is only useful if everyone in the house knows about it. Here is a version
+          that survives real life.
+        </p>
+
+        <h2>Step one: find your true monthly income</h2>
+        <Checks items={[
+          "Use take home pay, not salary.",
+          "If your income changes month to month, use the lowest of the last six months.",
+          "Count only money you can rely on. Bonuses and overtime are extra, not income.",
+        ]} />
+
+        <h2>Step two: list what must be paid</h2>
+        <Checks items={[
+          "Housing, utilities, and insurance.",
+          "Food and household basics.",
+          "Transport and fuel.",
+          "Minimum payments on any debt.",
+          "Childcare and school costs.",
+        ]} />
+
+        <h2>Step three: give the rest a job</h2>
+        <p>Every remaining dollar gets assigned before the month starts.</p>
+        <Checks items={[
+          "Savings first. Treat it like a bill.",
+          "Then the flexible things. Eating out, clothes, activities, gifts.",
+          "Then extra debt payments.",
+        ]} />
+
+        <h2>Make it work with kids</h2>
+        <Checks items={[
+          "Hold a short family meeting once a month. Fifteen minutes is plenty.",
+          "Give older kids a small budget of their own so they learn to run out of money safely.",
+          "Agree on one rule for unplanned spending. For example, anything over fifty dollars waits a day.",
+          "Keep a shared list on the fridge for things people want. Most wants fade in a week.",
+        ]} />
+
+        <Callout title="Plan for the months that break budgets">
+          <p>
+            Some costs come once a year and wreck the month they land in. Holidays and birthdays.
+            Back to school. Car registration and tires. Insurance payments that are not monthly.
+          </p>
+          <p>
+            Add up those yearly costs, divide by twelve, and save that amount every month in a
+            separate spot.
+          </p>
+        </Callout>
+
+        <h2>Signs your budget needs adjusting</h2>
+        <Checks items={[
+          "You go over in the same category three months running. The number is wrong, not you.",
+          "You never have any fun money. Budgets with no slack do not last.",
+          "You are paying for things nobody uses.",
+        ]} />
       </>
     ),
   },
@@ -282,14 +495,59 @@ export const ARTICLES: ArticleContent[] = [
     printable: true,
     body: (
       <>
-        <p>Print this worksheet and fill it in for the next 90 days.</p>
-        <h2>This quarter's focus</h2>
+        <p>
+          Print this worksheet and fill it in for the next 90 days. Ninety days is long enough to
+          change something and short enough that you can still picture the end.
+        </p>
+
+        <Callout title="Pick one thing">
+          <p>
+            People who pick one goal finish it far more often than people who pick five. Choose the
+            one that would make the others easier.
+          </p>
+        </Callout>
+
+        <h2>This quarter&apos;s focus</h2>
         <p>One thing I want to be different in 90 days: ____________________________________</p>
+        <p>How I will know it worked: ____________________________________</p>
+
         <h2>Three small habits to support it</h2>
+        <p>Keep each one small enough to do on your worst day, not your best one.</p>
         <p>1. ____________________________________</p>
         <p>2. ____________________________________</p>
         <p>3. ____________________________________</p>
-        <h2>Monthly check-in</h2>
+
+        <h2>What usually gets in the way</h2>
+        <Checks items={[
+          "The thing most likely to stop me: ______________________",
+          "What I will do when it happens: ______________________",
+          "Who I will tell about this goal: ______________________",
+        ]} />
+
+        <h2>Weekly habit tracker</h2>
+        <p>Tick a box each day you do the habit. Missing one day is normal. Missing two in a row is the warning sign.</p>
+        <table className="w-full border-collapse my-4 text-sm">
+          <thead>
+            <tr className="text-left border-b-2" style={{ borderColor: "var(--ink)" }}>
+              <th className="py-2 pr-2">Habit</th>
+              {["M","T","W","T","F","S","S"].map((d, idx) => (
+                <th key={idx} className="py-2 pr-2">{d}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3].map((n) => (
+              <tr key={n} className="border-b" style={{ borderColor: "var(--rule)" }}>
+                <td className="py-2 pr-2">Habit {n}</td>
+                {Array.from({ length: 7 }).map((_, d) => (
+                  <td key={d} className="py-2 pr-2"><span className="checkbox" /></td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h2>Monthly check in</h2>
         <table className="w-full border-collapse my-4 text-sm">
           <thead>
             <tr className="text-left border-b-2" style={{ borderColor: "var(--ink)" }}>
@@ -308,6 +566,13 @@ export const ARTICLES: ArticleContent[] = [
             ))}
           </tbody>
         </table>
+
+        <h2>At the end of 90 days</h2>
+        <Checks items={[
+          "What actually changed: ______________________",
+          "What I would do differently next time: ______________________",
+          "The one habit worth keeping: ______________________",
+        ]} />
       </>
     ),
   },

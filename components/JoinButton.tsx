@@ -6,7 +6,7 @@ import Icon from "./Icon";
 // Starts Stripe Checkout for the $149/yr retail plan. If the visitor isn't
 // signed in yet, creates a bare Supabase auth account first (email +
 // password from this same form) so Checkout has a profile_id to attach to.
-export default function JoinButton({ email, password, offer }: { email: string; password: string; offer?: string }) {
+export default function JoinButton({ email, password, offer, priceLabel = "$149/year" }: { email: string; password: string; offer?: string; priceLabel?: string }) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
   const [confirmSent, setConfirmSent] = useState(false);
@@ -95,7 +95,9 @@ export default function JoinButton({ email, password, offer }: { email: string; 
   return (
     <div>
       <button onClick={handleJoin} disabled={status === "loading"} className="btn-primary w-full justify-center">
-        {status === "loading" ? "Redirecting to checkout…" : "Continue to payment — $149/year"}
+        {/* Label follows the actual price: the offer page charges $19, and a
+            button promising $149 there is simply wrong. */}
+        {status === "loading" ? "Redirecting to checkout…" : `Continue to payment, ${priceLabel}`}
       </button>
       {error && <p className="form-error mt-3"><Icon name="info" />{error}</p>}
     </div>
