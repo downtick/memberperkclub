@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import AccessibilityToggle from "@/components/AccessibilityToggle";
 import IconSprite from "@/components/IconSprite";
 import { SITE } from "@/lib/siteConfig";
+import { A11Y_BOOT } from "@/components/a11yBoot";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -41,6 +42,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: A11Y_BOOT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {/* One sprite for the whole document; <Icon /> references its symbols. */}
         <IconSprite />

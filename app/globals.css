@@ -116,22 +116,120 @@ a { color: inherit; }
    selectors don't cross the <use> shadow boundary. */
 .ic { width: 24px; height: 24px; flex: none; display: block; }
 
-/* ── Accessibility: high-contrast mode ───────────────────────────────────── */
-html.a11y-contrast {
-  --ground: #ffffff;
-  --ground-2: #ffffff;
-  --ground-3: #f2f2f2;
-  --ink: #000000;
-  --ink-2: #1a1a1a;
-  --ink-3: #333333;
-  --rule: #555555;
-  --violet: #4315a0;
-  --violet-2: #4315a0;
-  --violet-3: #4315a0;
-  --violet-wash: #f0eaff;
+/* ─── Accessibility reading modes ───────────────────────────────────
+   Toggled by components/AccessibilityToggle.tsx via classes on <html>; the
+   class names must match A11Y_OPTIONS in components/a11yBoot.ts. These only
+   restyle, never restructure. Reference: websites/_reference/accessibility-widget/ */
+
+/* Widget chrome (plain CSS so it works with or without Tailwind). */
+.a11y-w { --a11y-accent: #0f766e; position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 60; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.a11y-w-launcher { display: flex; align-items: center; gap: 0.4rem; padding: 0.75rem; border-radius: 9999px; background: #0f172a; color: #fff; border: 0; cursor: pointer; box-shadow: 0 0 0 2px #fff, 0 8px 24px rgba(15,23,42,.3); }
+.a11y-w-launcher:hover { background: #1e293b; }
+.a11y-w-launcher:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 5px var(--a11y-accent); }
+.a11y-w-count { font-size: 0.75rem; font-weight: 700; line-height: 1; padding: 0.2rem 0.4rem; border-radius: 9999px; background: var(--a11y-accent); color: #fff; }
+.a11y-w-panel { position: absolute; right: 0; bottom: 3.9rem; width: 320px; max-width: calc(100vw - 2.5rem); background: #fff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 20px 50px rgba(15,23,42,.25); text-align: left; }
+.a11y-w-head { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; }
+.a11y-w-title { margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; font-family: inherit; letter-spacing: normal; }
+.a11y-w-close { background: none; border: 0; cursor: pointer; font-size: 1.4rem; line-height: 1; padding: 0 0.25rem; color: #64748b; }
+.a11y-w-close:hover { color: #0f172a; }
+.a11y-w-list { padding: 0.6rem; max-height: 60vh; overflow-y: auto; display: grid; gap: 0.2rem; }
+.a11y-w-opt { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 0.75rem; border: 0; background: transparent; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.a11y-w-opt:hover { background: #f8fafc; }
+.a11y-w-opt[aria-checked="true"] { background: #f0fdfa; box-shadow: inset 0 0 0 1px #5eead4; }
+.a11y-w-opt:focus-visible { outline: 3px solid var(--a11y-accent); outline-offset: 1px; }
+.a11y-w-label { display: block; font-size: 0.875rem; font-weight: 600; color: #0f172a; }
+.a11y-w-desc { display: block; font-size: 0.75rem; color: #64748b; }
+.a11y-w-track { flex-shrink: 0; width: 2.5rem; height: 1.5rem; padding: 0.125rem; border-radius: 9999px; background: #cbd5e1; transition: background-color .15s; }
+.a11y-w-knob { display: block; width: 1.25rem; height: 1.25rem; border-radius: 9999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.a11y-w-opt[aria-checked="true"] .a11y-w-track { background: var(--a11y-accent); }
+.a11y-w-opt[aria-checked="true"] .a11y-w-knob { transform: translateX(1rem); }
+.a11y-w-foot { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #64748b; }
+.a11y-w-reset { background: none; border: 0; cursor: pointer; font: inherit; font-weight: 600; color: var(--a11y-accent); text-decoration: underline; }
+.a11y-w-reset:disabled { color: #94a3b8; cursor: default; text-decoration: none; }
+
+/* High contrast. Most site colors are inline or utility classes, so recoloring
+   CSS variables reaches almost nothing (and a body filter breaks position:fixed).
+   Force pure black on white everywhere, then re-invert solid controls. */
+html.a11y-high-contrast *, html.a11y-high-contrast *::before, html.a11y-high-contrast *::after {
+  background-image: none !important; box-shadow: none !important; text-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; transition: none !important;
 }
-html.a11y-contrast .form-input { border-color: #000 !important; }
-html.a11y-contrast a:not([class]) { text-decoration: underline; }
+html.a11y-high-contrast, html.a11y-high-contrast body, html.a11y-high-contrast body * {
+  color: #000 !important; background-color: #fff !important; border-color: #000 !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+html.a11y-high-contrast body *::before, html.a11y-high-contrast body *::after {
+  background-color: transparent !important; border-color: #000 !important; color: inherit !important;
+}
+/* Empty decorative layers (overlays, blobs, gradient scrims) go transparent so
+   they never cover text once forced opaque. */
+html.a11y-high-contrast body div:empty { background-color: transparent !important; }
+html.a11y-high-contrast :is(input, select, textarea) { border: 2px solid #000 !important; }
+/* Every button gets a visible edge so unselected Yes/No and chips never read as plain text. */
+html.a11y-high-contrast :is(button, [role="button"]):not(.a11y-w-opt, .a11y-w-close, .a11y-w-reset) { border: 2px solid #000 !important; }
+html.a11y-high-contrast ::placeholder { color: #333 !important; opacity: 1 !important; }
+html.a11y-high-contrast :is(input[type="checkbox"], input[type="radio"], input[type="range"]) { accent-color: #000; }
+/* Solid controls: buttons, submit inputs, selected chips/toggles. Unselected
+   toggles (…="false") and outline/ghost/secondary buttons stay white so the
+   selected state stays visible. */
+html.a11y-high-contrast :is(
+  [class*="btn"], [class*="button"], button[type="submit"], input[type="submit"],
+  :is(a, button)[class*="bg-"][class*="text-white"], :is(a, button)[style*="background"],
+  [aria-pressed="true"], [aria-selected="true"], [role="switch"][aria-checked="true"]:not(.a11y-w-opt),
+  [data-on="true"], [data-selected="true"], [data-checked="true"], [data-state="on"], [data-state="checked"],
+  .skip-link, .a11y-w-launcher, .a11y-w-count, .a11y-w-opt[aria-checked="true"] .a11y-w-track
+):not([aria-pressed="false"], [aria-checked="false"], [aria-selected="false"], [data-on="false"], [data-selected="false"], [data-checked="false"], [class*="outline"], [class*="ghost"], [class*="secondary"]) {
+  background-color: #000 !important; color: #fff !important; border: 2px solid #000 !important;
+  -webkit-text-fill-color: #fff !important; text-decoration: none !important;
+}
+html.a11y-high-contrast :is(
+  [class*="btn"], [class*="button"], button[type="submit"],
+  :is(a, button)[class*="bg-"][class*="text-white"], :is(a, button)[style*="background"],
+  [aria-pressed="true"], [aria-selected="true"], [role="switch"][aria-checked="true"]:not(.a11y-w-opt),
+  [data-on="true"], [data-selected="true"], [data-checked="true"], [data-state="on"], [data-state="checked"],
+  .a11y-w-launcher
+):not([aria-pressed="false"], [aria-checked="false"], [aria-selected="false"], [data-on="false"], [data-selected="false"], [data-checked="false"], [class*="outline"], [class*="ghost"], [class*="secondary"]) * {
+  color: #fff !important; -webkit-text-fill-color: #fff !important; stroke: #fff; background-color: transparent !important;
+}
+html.a11y-high-contrast .a11y-w-opt[aria-checked="true"] .a11y-w-knob { background-color: #fff !important; }
+html.a11y-high-contrast .a11y-w-opt[aria-checked="true"] { outline: 3px solid #000; outline-offset: -3px; }
+html.a11y-high-contrast .a11y-w { background-color: transparent !important; }
+html.a11y-high-contrast .a11y-w-panel { border: 2px solid #000 !important; }
+html.a11y-high-contrast a { text-decoration: underline !important; text-underline-offset: 3px; }
+html.a11y-high-contrast :is([class*="text-red"], [class*="error"], [role="alert"]),
+html.a11y-high-contrast :is([class*="text-red"], [class*="error"], [role="alert"]) * { color: #b00020 !important; -webkit-text-fill-color: #b00020 !important; }
+html.a11y-high-contrast :is([aria-invalid="true"], [data-gap="true"], [data-err="true"], [data-error="true"], [data-missing="true"], [data-invalid="true"]) {
+  border-color: #b00020 !important; outline: 3px solid #b00020 !important; outline-offset: 2px;
+}
+html.a11y-high-contrast :is(header, footer, nav, section, aside, [class*="card"], details, table) { border-color: #000 !important; }
+html.a11y-high-contrast footer { border-top: 4px solid #000 !important; }
+html.a11y-high-contrast :focus-visible { outline: 3px solid #000 !important; outline-offset: 3px !important; }
+
+/* Larger text — scale the root; rem-based sizes follow. */
+html.a11y-large-text { font-size: 125% !important; }
+
+/* More spacing — easier tracking for low-vision and dyslexic readers. */
+html.a11y-spacing body { line-height: 1.85 !important; letter-spacing: 0.02em; word-spacing: 0.08em; }
+html.a11y-spacing body :is(p, li, dd, td, label) { line-height: 1.85 !important; }
+
+/* Readable font — high-legibility system stack. */
+html.a11y-readable-font body, html.a11y-readable-font body * {
+  font-family: Verdana, Tahoma, "Segoe UI", Arial, sans-serif !important;
+}
+
+/* Underline links. */
+html.a11y-underline-links a { text-decoration: underline !important; }
+
+/* Reduce motion — also honored automatically when the OS asks for it. */
+html.a11y-reduce-motion *, html.a11y-reduce-motion *::before, html.a11y-reduce-motion *::after {
+  animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+}
+html.a11y-reduce-motion { scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+/* ─── end accessibility reading modes ─── */
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }

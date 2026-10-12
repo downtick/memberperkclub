@@ -1,127 +1,147 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { A11Y_OPTIONS, A11Y_STORAGE_KEY, type A11yPrefs } from "./a11yBoot";
 
-const SCALES = [
-  { label: "A", value: "1", title: "Default text size" },
-  { label: "A+", value: "1.15", title: "Larger text" },
-  { label: "A++", value: "1.3", title: "Largest text" },
-];
+// Floating accessibility toolbar (reference: websites/_reference/accessibility-widget).
+// Each option toggles a class on <html>; every visual change lives in the
+// "Accessibility reading modes" block of app/globals.css, so page structure and
+// content never change. Prefs persist in localStorage and are re-applied before
+// paint by the A11Y_BOOT script in app/layout.tsx. Styling uses plain .a11y-w-*
+// classes (also in globals.css) so it works with or without Tailwind.
 
-export default function AccessibilityToggle() {
+function readPrefs(): A11yPrefs {
+  try {
+    const saved = localStorage.getItem(A11Y_STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+    // One-time migration from the old two-option toggle.
+    const legacy: A11yPrefs = {};
+    if (localStorage.getItem("a11y-contrast") === "1") legacy.contrast = true;
+    if (parseFloat(localStorage.getItem("a11y-fs") || "1") > 1) legacy.large = true;
+    return legacy;
+  } catch {
+    return {};
+  }
+}
+
+function applyPrefs(prefs: A11yPrefs) {
+  const root = document.documentElement;
+  for (const o of A11Y_OPTIONS) root.classList.toggle(o.cls, !!prefs[o.key]);
+}
+
+export function AccessibilityToggle() {
   const [open, setOpen] = useState(false);
-  const [contrast, setContrast] = useState(false);
-  const [fs, setFs] = useState("1");
+  const [prefs, setPrefs] = useState<A11yPrefs>({});
+  const launcher = useRef<HTMLButtonElement>(null);
 
-  // Saved preferences are read AND applied here rather than in a pre-paint
-  // inline script. Applying them post-hydration keeps the server and client
-  // markup identical, so no suppressHydrationWarning is needed anywhere.
   useEffect(() => {
-    try {
-      const savedContrast = localStorage.getItem("a11y-contrast") === "1";
-      const savedFs = localStorage.getItem("a11y-fs") || "1";
-      setContrast(savedContrast);
-      setFs(savedFs);
-      document.documentElement.classList.toggle("a11y-contrast", savedContrast);
-      document.documentElement.style.setProperty("--fs", savedFs);
-    } catch {}
+    const p = readPrefs();
+    applyPrefs(p);
+    // localStorage is only readable after mount; reading during render would
+    // cause a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrefs(p);
   }, []);
 
-  function applyContrast(next: boolean) {
-    setContrast(next);
-    document.documentElement.classList.toggle("a11y-contrast", next);
-    try {
-      localStorage.setItem("a11y-contrast", next ? "1" : "0");
-    } catch {}
-  }
+  // Functional updates so rapid toggles never read stale state.
+  const commit = useCallback((compute: (prev: A11yPrefs) => A11yPrefs) => {
+    setPrefs((prev) => {
+      const next = compute(prev);
+      applyPrefs(next);
+      try {
+        localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify(next));
+        localStorage.removeItem("a11y-contrast");
+        localStorage.removeItem("a11y-fs");
+      } catch {}
+      return next;
+    });
+  }, []);
 
-  function applyScale(value: string) {
-    setFs(value);
-    document.documentElement.style.setProperty("--fs", value);
-    try {
-      localStorage.setItem("a11y-fs", value);
-    } catch {}
-  }
+  const close = useCallback(() => {
+    setOpen(false);
+    launcher.current?.focus();
+  }, []);
 
-  const pickerBtn = (selected: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: "7px 0",
-    borderRadius: 9,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 13,
-    fontFamily: "inherit",
-    border: `1px solid ${selected ? "var(--violet)" : "var(--rule)"}`,
-    background: selected ? "var(--violet-wash)" : "var(--ground-2)",
-    color: selected ? "var(--violet)" : "var(--ink-2)",
-  });
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, close]);
+
+  const activeCount = Object.values(prefs).filter(Boolean).length;
 
   return (
-    <div style={{ position: "fixed", right: "1rem", bottom: "1rem", zIndex: 60 }}>
+    <div className="a11y-w">
       {open && (
-        <div
-          role="dialog"
-          aria-label="Accessibility options"
-          style={{
-            position: "absolute",
-            bottom: "3.75rem",
-            right: 0,
-            width: 250,
-            background: "var(--ground-2)",
-            borderRadius: 16,
-            padding: "16px 18px",
-            boxShadow: "var(--shadow-lg)",
-            border: "1px solid var(--rule)",
-          }}
-        >
-          <p className="eyebrow" style={{ margin: "0 0 10px" }}>Accessibility</p>
-
-          <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>Text size</p>
-          <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-            {SCALES.map((s) => (
-              <button key={s.value} onClick={() => applyScale(s.value)} title={s.title} aria-pressed={fs === s.value} style={pickerBtn(fs === s.value)}>
-                {s.label}
-              </button>
-            ))}
+        <div role="dialog" aria-label="Accessibility options" className="a11y-w-panel">
+          <div className="a11y-w-head">
+            <h2 className="a11y-w-title">Accessibility</h2>
+            <button type="button" onClick={close} aria-label="Close accessibility options" className="a11y-w-close">
+              ×
+            </button>
           </div>
-
-          <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-            <span style={{ fontSize: 13.5, color: "var(--ink)", fontWeight: 600 }}>High contrast</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={contrast}
-              aria-label="High contrast mode"
-              className="toggle-track"
-              data-on={contrast}
-              onClick={() => applyContrast(!contrast)}
-            />
-          </label>
+          <div className="a11y-w-list">
+            {A11Y_OPTIONS.map((o) => {
+              const on = !!prefs[o.key];
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  onClick={() => commit((prev) => ({ ...prev, [o.key]: !prev[o.key] }))}
+                  className="a11y-w-opt"
+                >
+                  <span>
+                    <span className="a11y-w-label">{o.label}</span>
+                    <span className="a11y-w-desc">{o.desc}</span>
+                  </span>
+                  <span aria-hidden="true" className="a11y-w-track">
+                    <span className="a11y-w-knob" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="a11y-w-foot">
+            <span>Saved on this device</span>
+            <button type="button" onClick={() => commit(() => ({}))} disabled={activeCount === 0} className="a11y-w-reset">
+              Reset all
+            </button>
+          </div>
         </div>
       )}
-
       <button
+        ref={launcher}
+        type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label="Accessibility options"
-        style={{
-          width: 50,
-          height: 50,
-          borderRadius: "50%",
-          border: "none",
-          cursor: "pointer",
-          background: "linear-gradient(145deg, var(--violet-3), var(--violet))",
-          color: "#fff",
-          fontSize: "1.35rem",
-          fontWeight: 700,
-          boxShadow: "var(--lift)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          lineHeight: 1,
-        }}
+        className="a11y-w-launcher"
       >
-        <span aria-hidden="true">A</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="12" cy="6.4" r="1.5" fill="currentColor" />
+          <path
+            d="M5.5 9.2c2 .9 4.2 1.3 6.5 1.3s4.5-.4 6.5-1.3M12 10.5v4m0 0l-2.4 4.6M12 14.5l2.4 4.6"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {activeCount > 0 && (
+          <span className="a11y-w-count" aria-hidden="true">
+            {activeCount}
+          </span>
+        )}
       </button>
     </div>
   );
 }
+
+export const AccessibilityWidget = AccessibilityToggle;
+export default AccessibilityToggle;
