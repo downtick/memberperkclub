@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html suppressHydrationWarning lang="en" className="h-full">
       <head>
         <script dangerouslySetInnerHTML={{ __html: A11Y_BOOT }} />
       </head>
