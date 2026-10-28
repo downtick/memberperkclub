@@ -28,7 +28,7 @@ const EVERYDAY_PERKS = [
   "Member rates on hotel rooms and rental cars",
   "Cruise shore excursions booked directly",
   "FICO score access and identity monitoring",
-  "Home warranty, pet medications and tires",
+  "Home warranty and tires",
   "Supplements, grooming, private email and a VPN",
   "Home, budgeting and wellness guides with printable checklists",
 ];

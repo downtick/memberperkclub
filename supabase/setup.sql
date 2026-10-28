@@ -434,7 +434,6 @@ insert into resources (name, category, description, affiliate_url, discount_code
 
 -- Home & Auto
 ('Home Warranty', 'Home & Auto', 'A home warranty plan covering major systems and appliances, with $50 off.', 'https://www.anrdoezrs.net/click-9121627-13073571', '$50 off', true, 10),
-('Pet Medications', 'Home & Auto', 'Discounted pet medications shipped to your door, up to 25% off.', 'https://www.dpbolvw.net/click-9121627-12521727', null, false, 20),
 ('Tire Rack', 'Home & Auto', 'Member pricing on tires, with expert reviews and ratings to help you choose.', 'https://www.kqzyfj.com/click-9121627-14310855', null, false, 30)
 on conflict do nothing;
 

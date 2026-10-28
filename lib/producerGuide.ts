@@ -75,7 +75,7 @@ export const BENEFIT_HIGHLIGHTS: { title: string; body: string }[] = [
   { title: "Travel", body: "Member rates on hotel rooms and rental cars, plus cruise shore excursions booked directly." },
   { title: "Business services", body: "AI answering service, call tracking, business texting, phone systems, web hosting, QuickBooks, a CRM, virtual assistants, LLC formation and a virtual mailbox." },
   { title: "Money & identity", body: "FICO score access, identity monitoring, DIY credit tools and online banking with Ally Bank." },
-  { title: "Home & auto", body: "Home warranty, pet medications and tires." },
+  { title: "Home & auto", body: "Home warranty and tires." },
   { title: "Health & personal", body: "Supplements and vitamins, grooming, secure private email and a VPN." },
   { title: "Guides library", body: "Practical home, budgeting and wellness guides, including printable checklists." },
 ];

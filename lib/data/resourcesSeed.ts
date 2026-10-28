@@ -54,7 +54,6 @@ export const RESOURCES_SEED: ResourceSeed[] = [
 
   // ── Home & Auto ──
   { name: "Home Warranty", category: "Home & Auto", description: "A home warranty plan covering major systems and appliances, with $50 off.", affiliate_url: "https://www.anrdoezrs.net/click-9121627-13073571", discount_code: "$50 off", featured: true, sort: 10 },
-  { name: "Pet Medications", category: "Home & Auto", description: "Discounted pet medications shipped to your door, up to 25% off.", affiliate_url: "https://www.dpbolvw.net/click-9121627-12521727", sort: 20 },
   { name: "Tire Rack", category: "Home & Auto", description: "Member pricing on tires, with expert reviews and ratings to help you choose.", affiliate_url: "https://www.kqzyfj.com/click-9121627-14310855", sort: 30 },
 ];
 
