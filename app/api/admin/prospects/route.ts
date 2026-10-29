@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  sendyConfigured,
-  prospectListId,
-  subscriptionStatus,
-  subscribe,
-} from "@/lib/sendy";
+import { sendyConfigured, prospectListId } from "@/lib/sendy";
+import { sendyStatus, subscribeWithConsent } from "@/lib/sendyConsent";
 
 const Body = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -69,29 +65,20 @@ export async function POST(request: NextRequest) {
 
   const listId = prospectListId();
   try {
-    // Status BEFORE subscribe, never after: Sendy's /subscribe silently
-    // RE-ACTIVATES an address that unsubscribed, bounced or complained. For
-    // a list built from convention badges that is both a legal problem
-    // (ignoring an opt-out) and a deliverability one.
-    const status = await subscriptionStatus(email, listId);
-    if (status === "Unsubscribed" || status === "Bounced" || status === "Complained") {
-      return NextResponse.json({ outcome: "previously_unsubscribed" as Outcome, status });
+    // Sendy's /subscribe silently RE-ACTIVATES an address that unsubscribed,
+    // bounced or complained. For a list built from convention badges that is
+    // both a legal problem (ignoring an opt-out) and a deliverability one, so
+    // this goes through the shared consent module in lead mode, which leaves
+    // opted-out addresses off. An unreadable status is reported as an error
+    // (not "unsubscribed") so the capture page keeps the entry queued to retry.
+    if ((await sendyStatus(email, listId)) === null) {
+      return NextResponse.json({ outcome: "error" as Outcome, error: "Could not reach Sendy." }, { status: 502 });
     }
-    if (status === "Subscribed" || status === "Unconfirmed") {
-      // Already on the list: the autoresponder already fired for them, and a
-      // second subscribe would not send it again anyway.
-      return NextResponse.json({ outcome: "already_on_list" as Outcome });
-    }
-
-    const res = await subscribe(email, name, listId);
-    if (res === "1" || res === "true") {
-      return NextResponse.json({ outcome: "sent" as Outcome });
-    }
-    if (/already subscribed/i.test(res)) {
-      return NextResponse.json({ outcome: "already_on_list" as Outcome });
-    }
-    console.error(`[sendy] subscribe rejected email=${email} response=${res}`);
-    return NextResponse.json({ outcome: "error" as Outcome, error: `Sendy: ${res}` }, { status: 502 });
+    const result = await subscribeWithConsent({ email, name, listId, mode: "lead" });
+    if (result === "subscribed") return NextResponse.json({ outcome: "sent" as Outcome });
+    if (result === "already") return NextResponse.json({ outcome: "already_on_list" as Outcome });
+    if (result === "skipped") return NextResponse.json({ outcome: "previously_unsubscribed" as Outcome });
+    return NextResponse.json({ outcome: "error" as Outcome, error: "Sendy rejected the subscribe (see logs)." }, { status: 502 });
   } catch (err) {
     console.error("[sendy] request failed:", err);
     return NextResponse.json({ outcome: "error" as Outcome, error: "Could not reach Sendy." }, { status: 502 });

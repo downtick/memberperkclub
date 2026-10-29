@@ -25,27 +25,8 @@ async function post(path: string, fields: Record<string, string>): Promise<strin
   return (await res.text()).trim();
 }
 
-// Sendy's documented status strings. Anything else is an API error message.
-export type SendyStatus =
-  | "Subscribed"
-  | "Unsubscribed"
-  | "Unconfirmed"
-  | "Bounced"
-  | "Soft bounced"
-  | "Complained"
-  | "Email does not exist in list";
-
-export async function subscriptionStatus(email: string, listId: string): Promise<string> {
-  return post("/api/subscribers/subscription-status.php", { email, list_id: listId });
-}
-
-// Returns Sendy's raw response: "1" / "true" on success, "Already subscribed."
-// when they are already on the list, otherwise an error message.
-export async function subscribe(email: string, name: string, listId: string): Promise<string> {
-  const fields: Record<string, string> = { email, list: listId, boolean: "true" };
-  if (name) fields.name = name;
-  return post("/subscribe", fields);
-}
+// Subscribing goes through lib/sendyConsent (status check first, so an
+// opted-out address is never silently re-activated).
 
 export async function activeSubscriberCount(listId: string): Promise<string> {
   return post("/api/subscribers/active-subscriber-count.php", { list_id: listId });
