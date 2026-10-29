@@ -40,8 +40,14 @@ function wrap(title: string, bodyHtml: string): string {
 // Built from lib/producerGuide.ts so the welcome email, the prospect email
 // and the public guide page never disagree. Tables and inline styles only:
 // that is what Apple Mail, Gmail and Outlook all render the same way.
-function esc(v: string): string {
+function esc(v: string | null | undefined): string {
   return (v || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+// Subject lines carry visitor text: collapse CR/LF so it can never break onto
+// a new header line, whatever the transport does with it.
+function oneLine(v: string | null | undefined): string {
+  return (v || "").replace(/[\r\n]+/g, " ").trim();
 }
 
 type EmailStep = GuideStep & { done?: boolean };
@@ -115,19 +121,19 @@ export async function sendWelcomeEmail(opts: {
   // link, the old two-branch version emitted href="undefined" and the member
   // had no way in at all. Fall back to the self-serve reset instead.
   const credentialsHtml = tempPassword
-    ? `<p>Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.</p>
+    ? `<p>Your login is <strong>${esc(to)}</strong> and your temporary password is <strong>${esc(tempPassword)}</strong>. Please change it after you sign in.</p>
        <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Log in to your account &rarr;</a></p>`
     : setPasswordLink
       ? `<p>Click below to set your password and activate your account:</p>
-         <p><a href="${setPasswordLink}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
+         <p><a href="${esc(setPasswordLink)}" style="color:${VIOLET};font-weight:700">Set your password &rarr;</a></p>
          <p style="color:#665B7A;font-size:13px">This link expires in 72 hours.</p>`
-      : `<p>To get in, go to the login page and choose <strong>Email me a sign-in link</strong>. Your login is <strong>${to}</strong> &mdash; no password needed.</p>
+      : `<p>To get in, go to the login page and choose <strong>Email me a sign-in link</strong>. Your login is <strong>${esc(to)}</strong> &mdash; no password needed.</p>
          <p><a href="${SITE_URL}/login" style="color:${VIOLET};font-weight:700">Go to the login page &rarr;</a></p>`;
 
   const html = wrap(
     "Welcome to MemberPerkClub",
-    `<p>Hi ${firstName || "there"},</p>
-     <p>Your membership is active. Your member number is <strong>Member no. ${memberDigits}</strong>.</p>
+    `<p>Hi ${esc(firstName) || "there"},</p>
+     <p>Your membership is active. Your member number is <strong>Member no. ${esc(memberDigits)}</strong>.</p>
      ${credentialsHtml}
      <h3 style="color:${INK};font-size:16px;margin-top:24px">Where to find things</h3>
      <ul style="padding-left:20px;color:#4C405F">
@@ -188,7 +194,7 @@ export async function sendProducerSignupAdminNotice(opts: {
     ]},
     trackingSection(o.referrer, o.pageUrl),
   ];
-  return sendAdminNotice(`New producer: ${o.businessName}`, "New producer sign-up", sections);
+  return sendAdminNotice(`New producer: ${oneLine(o.businessName)}`, "New producer sign-up", sections);
 }
 // ── 3. Contact-form notification ────────────────────────────────────────
 export async function sendContactNotice(opts: {
@@ -205,19 +211,19 @@ export async function sendContactNotice(opts: {
   const html = wrap(
     "New Contact Form Submission",
     `<table style="width:100%;border-collapse:collapse;font-size:14px">
-       <tr><td style="padding:6px 0;font-weight:700;width:120px">Name</td><td>${firstName} ${lastName}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700">Email</td><td>${email}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700">Phone</td><td>${phone}</td></tr>
-       <tr><td style="padding:6px 0;font-weight:700">State</td><td>${state}</td></tr>
+       <tr><td style="padding:6px 0;font-weight:700;width:120px">Name</td><td>${esc(firstName)} ${esc(lastName)}</td></tr>
+       <tr><td style="padding:6px 0;font-weight:700">Email</td><td>${esc(email)}</td></tr>
+       <tr><td style="padding:6px 0;font-weight:700">Phone</td><td>${esc(phone)}</td></tr>
+       <tr><td style="padding:6px 0;font-weight:700">State</td><td>${esc(state)}</td></tr>
      </table>
      <h3 style="color:${INK};font-size:15px;margin-top:20px">Message</h3>
-     <p style="white-space:pre-wrap">${message}</p>
+     <p style="white-space:pre-wrap">${esc(message)}</p>
      <hr style="border:none;border-top:1px solid #E6DEF4;margin:20px 0" />
-     <p style="font-size:12px;color:#665B7A">Referring URL: ${referrer || "(direct)"}<br/>Page: ${pageUrl || "(unknown)"}</p>`
+     <p style="font-size:12px;color:#665B7A">Referring URL: ${esc(referrer) || "(direct)"}<br/>Page: ${esc(pageUrl) || "(unknown)"}</p>`
   );
   const text = `New contact form submission\nName: ${firstName} ${lastName}\nEmail: ${email}\nPhone: ${phone}\nState: ${state}\n\nMessage:\n${message}\n\nReferring URL: ${referrer || "(direct)"}\nPage: ${pageUrl || "(unknown)"}`;
 
-  return sendEmail({ to: adminNotifyAddress(), subject: `Contact form: ${firstName} ${lastName}`, html, text, replyTo: email });
+  return sendEmail({ to: adminNotifyAddress(), subject: oneLine(`Contact form: ${oneLine(firstName)} ${oneLine(lastName)}`), html, text, replyTo: email });
 }
 
 // ── 4. Producer welcome (admin-created account) ───────────────────────────
@@ -238,7 +244,7 @@ export async function sendProducerWelcomeEmail(opts: {
   // temp password nor a set-password link — Supabase already emailed them a
   // sign-in link, and this email must say so or the two look like spam.
   const activateHtml = tempPassword
-    ? `Your login is <strong>${to}</strong> and your temporary password is <strong>${tempPassword}</strong>. Please change it after you sign in.`
+    ? `Your login is <strong>${esc(to)}</strong> and your temporary password is <strong>${esc(tempPassword)}</strong>. Please change it after you sign in.`
     : setPasswordLink
       ? `Use the button below to set your password and activate your producer account. The link expires in 72 hours.`
       : `We've emailed you a <strong>separate sign-in link</strong> from club@memberperkclub.com &mdash; click <strong>Sign in</strong> in that email. There's no password to remember: to sign in later, choose <strong>Email me a sign-in link</strong> on the login page.`;
@@ -302,16 +308,16 @@ export async function sendProducerEnrollmentConfirmation(opts: {
 
   const html = wrap(
     "Your client is enrolled",
-    `<p>Hi ${producerFirstName || "there"},</p>
-     <p><strong>${clientName}</strong> is now an active MemberPerkClub member. Nothing further is needed from you &mdash; your part is done.</p>
+    `<p>Hi ${esc(producerFirstName) || "there"},</p>
+     <p><strong>${esc(clientName)}</strong> is now an active MemberPerkClub member. Nothing further is needed from you &mdash; your part is done.</p>
      <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
-       <tr><td style="padding:8px 0;color:#665B7A;width:140px">Member</td><td style="padding:8px 0;color:${INK};font-weight:600">${clientName}</td></tr>
-       <tr><td style="padding:8px 0;color:#665B7A">Email</td><td style="padding:8px 0;color:${INK}">${clientEmail}</td></tr>
-       <tr><td style="padding:8px 0;color:#665B7A">Member no.</td><td style="padding:8px 0;color:${INK};font-family:monospace">${memberDigits}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A;width:140px">Member</td><td style="padding:8px 0;color:${INK};font-weight:600">${esc(clientName)}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A">Email</td><td style="padding:8px 0;color:${INK}">${esc(clientEmail)}</td></tr>
+       <tr><td style="padding:8px 0;color:#665B7A">Member no.</td><td style="padding:8px 0;color:${INK};font-family:monospace">${esc(memberDigits)}</td></tr>
        <tr><td style="padding:8px 0;color:#665B7A">Term</td><td style="padding:8px 0;color:${INK}">One year from today</td></tr>
      </table>
      <h3 style="color:${INK};font-size:16px;margin-top:24px">What happens next</h3>
-     <p>We have emailed ${clientFirstName || "your client"} a welcome message at <strong>${clientEmail}</strong> with their member number and a link to set their own password. Once they set it, they can sign in and start using their benefits right away.</p>
+     <p>We have emailed ${esc(clientFirstName) || "your client"} a welcome message at <strong>${esc(clientEmail)}</strong> with their member number and a link to set their own password. Once they set it, they can sign in and start using their benefits right away.</p>
      <p style="color:#665B7A;font-size:13px">If they say it never arrived, ask them to check spam first. They can also sign in any time at the login page by choosing &ldquo;Email me a sign-in link&rdquo;.</p>
      <p><a href="${SITE_URL}/producer/dashboard" style="color:${VIOLET};font-weight:700">View your producer dashboard &rarr;</a></p>`
   );
@@ -329,7 +335,7 @@ We have emailed ${clientFirstName || "your client"} at ${clientEmail} with their
 
 Producer dashboard: ${SITE_URL}/producer/dashboard`;
 
-  return sendEmail({ to, subject: `${clientName} is enrolled — MemberPerkClub`, html, text });
+  return sendEmail({ to, subject: oneLine(`${oneLine(clientName)} is enrolled — MemberPerkClub`), html, text });
 }
 
 // ── 6. Convention prospect welcome — pasted into a SENDY autoresponder ────
@@ -418,7 +424,7 @@ function sectionsText(sections: Section[]): string {
 async function sendAdminNotice(subject: string, heading: string, sections: Section[]) {
   return sendEmail({
     to: adminNotifyAddress(),
-    subject,
+    subject: oneLine(subject),
     html: wrap(heading, sectionsHtml(sections)),
     text: `${heading}\n\n${sectionsText(sections)}`,
   });
@@ -486,7 +492,7 @@ export async function sendProducerRenewalConfirmation(opts: {
      <p>We've let your client know. Nothing else is needed from you.</p>
      <p><a href="${GUIDE_URLS.dashboard}" style="color:${VIOLET};font-weight:700">View your producer dashboard &rarr;</a></p>`);
   const text = `${o.clientName} (member no. ${digits(o.memberNumber)}) is renewed through ${datePT(o.newExpiresAt)}.\n\nDashboard: ${GUIDE_URLS.dashboard}`;
-  return sendEmail({ to: o.to, subject: `${o.clientName} renewed through ${datePT(o.newExpiresAt)}`, html, text });
+  return sendEmail({ to: o.to, subject: `${oneLine(o.clientName)} renewed through ${datePT(o.newExpiresAt)}`, html, text });
 }
 
 // To the MEMBER. Never mentions a price: producer-enrolled members never see
@@ -527,5 +533,5 @@ export async function sendProducerExpiryReminder(opts: {
      <p style="text-align:center;margin:22px 0 6px"><a href="${GUIDE_URLS.dashboard}" style="display:inline-block;background:${VIOLET};color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 28px;border-radius:10px">Renew from my dashboard &rarr;</a></p>
      <p style="color:#665B7A;font-size:13px">If you do nothing, their access simply ends on that date. There is no charge unless you choose to renew.</p>`);
   const text = `Client memberships ending soon:\n\n${o.clients.map((c) => `- ${c.name} (${digits(c.memberNumber)}) ends ${datePT(c.expiresAt)} — ${c.daysLeft} days`).join("\n")}\n\nRenew from your dashboard ($12 each): ${GUIDE_URLS.dashboard}\nNo charge unless you choose to renew.`;
-  return sendEmail({ to: o.to, subject: n === 1 ? `${o.clients[0].name}'s membership ends in ${soonest} days` : `${n} client memberships ending soon`, html, text });
+  return sendEmail({ to: o.to, subject: n === 1 ? `${oneLine(o.clients[0].name)}'s membership ends in ${soonest} days` : `${n} client memberships ending soon`, html, text });
 }
