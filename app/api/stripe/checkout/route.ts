@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
     const { data: profile } = await admin.from("profiles").select("*").eq("id", user.id).single();
 
-    const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "https://memberperkclub.com";
+    // Never build redirect URLs from the request's Origin header.
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://memberperkclub.com";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

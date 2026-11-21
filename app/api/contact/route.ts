@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   const { firstName, lastName, email, phone, state, message, referrer, pageUrl } = parsed.data;
 
-  await sendContactNotice({
+  const sent = await sendContactNotice({
     firstName,
     lastName,
     email,
@@ -61,7 +61,17 @@ export async function POST(request: NextRequest) {
     message,
     referrer,
     pageUrl,
-  }).catch((err) => console.error("Contact email error:", err));
+  }).catch((err) => {
+    console.error("Contact email error:", err);
+    return { ok: false };
+  });
+  // sendEmail returns {ok:false} instead of throwing, so check the result.
+  if (!sent?.ok) {
+    return NextResponse.json(
+      { error: "We couldn't send your message just now. Please try again." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ success: true });
 }

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { sendyConfigured, prospectListId, activeSubscriberCount } from "@/lib/sendy";
@@ -7,6 +8,14 @@ import { sendyConfigured, prospectListId, activeSubscriberCount } from "@/lib/se
 // from anywhere. Saves guessing which env var is missing when something that
 // should send an email quietly doesn't.
 export const dynamic = "force-dynamic";
+
+/** Constant-time check of "Bearer <secret>"; false when the secret is unset. */
+function bearerMatches(header: string | null, secret: string | undefined): boolean {
+  if (!secret || !header) return false;
+  const a = Buffer.from(header);
+  const b = Buffer.from(`Bearer ${secret}`);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // Stripe's own `type`/`code` survive minification; `err.constructor.name`
 // does not — it comes back as a single mangled letter in production.
@@ -54,6 +63,11 @@ export async function GET(request: Request) {
   // customer — so it stays safe to hit from anywhere.
   if (new URL(request.url).searchParams.get("deep") !== "1") {
     return NextResponse.json(shallow);
+  }
+  // Deep mode makes live Stripe/SMTP2GO/Sendy calls: cron secret only, so it
+  // can't be looped by anyone to burn API rate limits or map integrations.
+  if (!bearerMatches(request.headers.get("authorization"), process.env.CRON_SECRET)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const stripeDeep: Record<string, unknown> = {
