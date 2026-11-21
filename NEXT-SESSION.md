@@ -38,6 +38,8 @@ outright. This breaks producer card setup, the $12 enrollment, and the $149
 checkout. The user must replace it from Stripe -> Developers -> API keys on
 account `acct_1U9vffGxZ5qOKVch`, then redeploy.
 
+**(2026-11-20) `?deep=1` now requires `Authorization: Bearer $CRON_SECRET`** (security audit: it was public and made live API calls).
+
 **Use `?deep=1` from now on.** The plain `/api/health` checks only that a
 variable is non-empty, which reported all-green for weeks while the key was
 dead. `?deep=1` actually calls Stripe (`balance.retrieve`, then
