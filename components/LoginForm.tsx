@@ -35,9 +35,15 @@ export default function LoginForm() {
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Sign-in only. Accounts are created by checkout, producer
+        // enrollment or the confirmed producer signup — never by typing an
+        // address here (that would let anyone squat someone else's email).
+        shouldCreateUser: false,
       },
     });
-    if (err) {
+    // An unknown address gets the same "check your email" screen as a real
+    // one, so this form can't be used to find out who has an account.
+    if (err && !/signups? not allowed|user not found/i.test(err.message)) {
       setError(err.message);
       setStatus("error");
       return;
@@ -50,7 +56,7 @@ export default function LoginForm() {
       <div className="text-center py-4">
         <span className="icbox" style={{ margin: "0 auto 12px" }}><Icon name="doc" /></span>
         <p className="font-semibold mb-1">Check your email</p>
-        <p className="text-sm text-[var(--ink-3)]">We sent a login link to {email}. It also works as a password reset — click it and you&apos;ll be signed in.</p>
+        <p className="text-sm text-[var(--ink-3)]">If {email} has an account, we sent it a login link. It also works as a password reset — click it and you&apos;ll be signed in.</p>
       </div>
     );
   }

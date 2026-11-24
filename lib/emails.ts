@@ -236,8 +236,10 @@ export async function sendProducerWelcomeEmail(opts: {
   businessName: string;
   tempPassword?: string;
   setPasswordLink?: string;
+  /** Self-signup: the confirmation link already signed them in. */
+  signedIn?: boolean;
 }) {
-  const { to, firstName, businessName, tempPassword, setPasswordLink } = opts;
+  const { to, firstName, businessName, tempPassword, setPasswordLink, signedIn } = opts;
 
   // Step 2 ("activate") depends on how the account was created. Three cases,
   // and the third matters: a producer who signed themselves up has neither a
@@ -247,7 +249,9 @@ export async function sendProducerWelcomeEmail(opts: {
     ? `Your login is <strong>${esc(to)}</strong> and your temporary password is <strong>${esc(tempPassword)}</strong>. Please change it after you sign in.`
     : setPasswordLink
       ? `Use the button below to set your password and activate your producer account. The link expires in 72 hours.`
-      : `We've emailed you a <strong>separate sign-in link</strong> from club@memberperkclub.com &mdash; click <strong>Sign in</strong> in that email. There's no password to remember: to sign in later, choose <strong>Email me a sign-in link</strong> on the login page.`;
+      : signedIn
+        ? `Done &mdash; you confirmed your email and you're signed in. There's no password to remember: to sign in later, choose <strong>Email me a sign-in link</strong> on the login page.`
+        : `We've emailed you a <strong>separate sign-in link</strong> from club@memberperkclub.com &mdash; click <strong>Sign in</strong> in that email. There's no password to remember: to sign in later, choose <strong>Email me a sign-in link</strong> on the login page.`;
   const activateUrl = setPasswordLink || GUIDE_URLS.login;
   const activateCta = setPasswordLink ? "Set your password" : "Go to the login page";
 
@@ -276,7 +280,7 @@ export async function sendProducerWelcomeEmail(opts: {
 Welcome aboard. Your free producer account for ${businessName} is set up.
 
 1. Create your account — DONE
-2. Activate your account — ${tempPassword ? `Login: ${to} / Temp password: ${tempPassword}` : setPasswordLink ? `Set your password: ${setPasswordLink}` : `Click "Sign in" in the separate sign-in email we sent you.`}
+2. Activate your account — ${tempPassword ? `Login: ${to} / Temp password: ${tempPassword}` : setPasswordLink ? `Set your password: ${setPasswordLink}` : signedIn ? `DONE (to sign in later, choose "Email me a sign-in link" at ${GUIDE_URLS.login})` : `Click "Sign in" in the separate sign-in email we sent you.`}
 3. Add a payment method (required before you can enroll): ${GUIDE_URLS.paymentMethod}
 4. Enroll your first client: ${GUIDE_URLS.enroll}
 
@@ -288,6 +292,50 @@ Getting-started guide and common questions: ${GUIDE_URLS.gettingStarted}`;
 
   return sendEmail({ to, subject: "Your MemberPerkClub producer account is ready", html, text });
 }
+// ── Producer self-signup: confirm your email ───────────────────────────────
+// Sent BEFORE any account exists. Clicking the link is what creates the
+// account (see /api/producer/confirm), so an account can only ever belong to
+// someone who controls the inbox.
+export async function sendProducerConfirmEmail(opts: { to: string; firstName: string; link: string }) {
+  const { to, firstName, link } = opts;
+  const html = wrap(
+    "Confirm your email to finish signing up",
+    `<p>Hi ${esc(firstName) || "there"},</p>
+     <p>Click the button below to confirm your email address. That creates your free MemberPerkClub producer account and signs you in.</p>
+     <p style="margin:26px 0"><a href="${esc(link)}" style="background:${VIOLET};color:#fff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:8px;display:inline-block">Confirm and create my account</a></p>
+     <p style="font-size:13px;color:#665B7A">The link works for 24 hours. If you didn't ask for a producer account, ignore this email and nothing will be created.</p>`
+  );
+  const text = `Confirm your email to finish signing up
+
+Hi ${firstName || "there"},
+
+Open this link to confirm your email. It creates your free MemberPerkClub producer account and signs you in:
+${link}
+
+The link works for 24 hours. If you didn't ask for a producer account, ignore this email and nothing will be created.`;
+  return sendEmail({ to, subject: "Confirm your email to finish your MemberPerkClub signup", html, text });
+}
+
+// Someone (maybe the owner, maybe not) tried to sign up with an email that
+// already has an account. Tell the inbox owner how to sign in; reveal nothing
+// on the website itself.
+export async function sendProducerAlreadyRegisteredEmail(opts: { to: string }) {
+  const html = wrap(
+    "You already have an account",
+    `<p>Someone asked to open a MemberPerkClub producer account with this email address, but it already has an account.</p>
+     <p>To sign in, choose <strong>Email me a sign-in link</strong> on the login page.</p>
+     <p style="margin:26px 0"><a href="${GUIDE_URLS.login}" style="background:${VIOLET};color:#fff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:8px;display:inline-block">Go to the login page</a></p>
+     <p style="font-size:13px;color:#665B7A">If this wasn't you, you can ignore this email. Nothing on your account changed.</p>`
+  );
+  const text = `You already have a MemberPerkClub account
+
+Someone asked to open a producer account with this email address, but it already has an account.
+To sign in, choose "Email me a sign-in link" at ${GUIDE_URLS.login}
+
+If this wasn't you, ignore this email. Nothing on your account changed.`;
+  return sendEmail({ to: opts.to, subject: "You already have a MemberPerkClub account", html, text });
+}
+
 // ── 5. Producer confirmation: "your client is enrolled" ───────────────────
 // Sent to the PRODUCER, not the member, the moment an enrollment succeeds.
 // Deliberately says nothing about price: the producer sets their own retail

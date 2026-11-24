@@ -2,7 +2,6 @@
 import { useState, FormEvent } from "react";
 import { formatPhoneInput, formatZipInput } from "@/lib/phone";
 import { STATES } from "@/lib/schemas";
-import { createClient } from "@/lib/supabase/client";
 import Icon from "./Icon";
 
 export default function ProducerSignupForm() {
@@ -46,12 +45,8 @@ export default function ProducerSignupForm() {
         setSubmitError(data.error || "Something went wrong.");
         return;
       }
-      // Send a login link so the producer can sign straight in.
-      const supabase = createClient();
-      await supabase.auth.signInWithOtp({
-        email: values.email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      });
+      // Nothing is created yet: the account is made when the producer clicks
+      // the confirmation link we just emailed.
       setDone(true);
     } catch {
       setSubmitError("Network error. Please try again.");
@@ -64,10 +59,10 @@ export default function ProducerSignupForm() {
     return (
       <div className="text-center py-6">
         <span className="icbox" style={{ margin: "0 auto 12px" }}><Icon name="check" /></span>
-        <h3 className="display" style={{ fontSize: 21, marginBottom: 8 }}>You&apos;re in</h3>
+        <h3 className="display" style={{ fontSize: 21, marginBottom: 8 }}>Check your email</h3>
         <p style={{ color: "var(--ink-2)" }}>
-          We sent a login link to {values.email}. Click it to sign in and add a payment method so
-          you can start enrolling clients.
+          We sent a confirmation link to {values.email}. Click it within 24 hours to create your
+          account and sign in. Not there in a couple of minutes? Check spam.
         </p>
       </div>
     );

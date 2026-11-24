@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProducerSignupSchema } from "@/lib/schemas";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendProducerSignupAdminNotice, sendProducerWelcomeEmail } from "@/lib/emails";
+import { sendProducerConfirmEmail, sendProducerAlreadyRegisteredEmail } from "@/lib/emails";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSignupToken } from "@/lib/signupToken";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://memberperkclub.com";
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -12,11 +15,11 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-// Free producer account creation. Creates a Supabase Auth user (no
-// password — producers use magic-link login only, triggered client-side
-// right after this call succeeds), a profiles row (role='producer'), and a
-// producers row (billing_mode defaults to 'per_client'). Sends the
-// back-end-only admin notification email — never shown on any page.
+// Step 1 of producer self-signup. Validates the form and emails a
+// confirmation (magic) link. NOTHING is created here: the account is created
+// only when the link is clicked (/api/producer/confirm), which proves the
+// person controls the inbox. The response is the same whether or not the
+// email is already registered, so the form cannot be used to probe accounts.
 export async function POST(request: NextRequest) {
   if (!checkRateLimit(getClientIp(request)).allowed) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
@@ -42,63 +45,26 @@ export async function POST(request: NextRequest) {
     addressLine1, addressLine2, city, state, postalCode,
     referrer, pageUrl,
   } = parsed.data;
+
   const admin = createAdminClient();
-
   const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
-  if (existing) {
-    return NextResponse.json({ error: "An account with this email already exists. Try logging in." }, { status: 409 });
+
+  const result = existing
+    ? await sendProducerAlreadyRegisteredEmail({ to: email })
+    : await sendProducerConfirmEmail({
+        to: email,
+        firstName,
+        link: `${SITE_URL}/api/producer/confirm?t=${createSignupToken({
+          firstName, lastName, businessName, email, phone,
+          addressLine1, addressLine2: addressLine2 || "", city, state, postalCode,
+          referrer, pageUrl,
+        })}`,
+      });
+
+  if (!result.ok) {
+    console.error("Producer signup email error:", result.error);
+    return NextResponse.json({ error: "We couldn't send the confirmation email. Please try again." }, { status: 502 });
   }
-
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-  });
-
-  if (createErr || !created.user) {
-    console.error("Producer auth user create error:", createErr);
-    return NextResponse.json({ error: "Unable to create account." }, { status: 500 });
-  }
-
-  const userId = created.user.id;
-
-  // The handle_new_auth_user() trigger already inserted a bare profiles row;
-  // fill in the producer's details here.
-  const { data: producerProfile } = await admin
-    .from("profiles")
-    .update({ role: "producer", first_name: firstName, last_name: lastName, phone, state })
-    .eq("id", userId)
-    .select("member_number")
-    .single();
-
-  await admin.from("producers").insert({
-    id: userId,
-    business_name: businessName,
-    address_line1: addressLine1,
-    address_line2: addressLine2 || null,
-    city,
-    state,
-    postal_code: postalCode,
-    billing_mode: "per_client",
-  });
-
-  await admin.from("member_events").insert({ member_id: userId, event: "joined", detail: { role: "producer" } });
-
-  // The producer's own welcome — how the wholesale model works and, above all,
-  // the link to add a payment method, without which they cannot enroll anyone.
-  // No credentials here: they sign in with the magic link sent by the auth
-  // provider immediately after this call.
-  await sendProducerWelcomeEmail({
-    to: email,
-    firstName,
-    businessName,
-  }).catch((err) => console.error("Producer welcome email error:", err));
-
-  await sendProducerSignupAdminNotice({
-    firstName, lastName, businessName, email, phone,
-    addressLine1, addressLine2: addressLine2 || undefined, city, state, postalCode,
-    memberNumber: producerProfile?.member_number ?? undefined,
-    referrer, pageUrl,
-  }).catch((err) => console.error("Producer admin notice error:", err));
 
   return NextResponse.json({ success: true, email });
 }
